@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <modules>
+        <Fetchr_Shiphappy>
+            <version>1.0.0</version>
+        </Fetchr_Shiphappy>
+    </modules>
+    <global>
+        <helpers>
+            <shiphappy>
+                <class>Fetchr_Shiphappy_Helper</class>
+            </shiphappy>
+        </helpers>
+        <models>
+            <shiphappy>
+                <class>Fetchr_Shiphappy_Model</class>
+            </shiphappy>
+        </models>
+    </global>
+    <admin>
+        <routers>
+            <shiphappy>
+                <use>admin</use>
+                <args>
+                    <module>Fetchr_Shiphappy</module>
+                    <frontName>shiphappy</frontName>
+                </args>
+            </shiphappy>
+        </routers>
+    </admin>
+    <adminhtml>
+        <layout>
+            <updates>
+                <shiphappy>
+                    <file>shiphappy.xml</file>
+                </shiphappy>
+            </updates>
+        </layout>
+    </adminhtml>
+    <crontab>
+        <jobs>
+            <!-- First batch push @ 10 AM -->
+            <Fetchr_Shiphappy_1>
+                <schedule><cron_expr>* 14 * * *</cron_expr></schedule>
+                <run>
+                    <model>shiphappy/ship_push::run</model>
+                </run>
+            </Fetchr_Shiphappy_1>
+            <!-- First batch push @ 1 PM -->
+            <Fetchr_Shiphappy_2>
+                <schedule><cron_expr>* 19 * * *</cron_expr></schedule>
+                <run>
+                    <model>shiphappy/ship_push::run</model>
+                </run>
+            </Fetchr_Shiphappy_2>
+            <!-- First batch push @ 5 PM -->
+            <Fetchr_Shiphappy_3>
+                <schedule><cron_expr>* 22 * * *</cron_expr></schedule>
+                <run>
+                    <model>shiphappy/ship_push::run</model>
+                </run>
+            </Fetchr_Shiphappy_3>
+        </jobs>
+    </crontab>
+	<default>
+        <shiphappy>
+            <settings>
+                <liveurl>http://menavip.com</liveurl>
+                <stagingurl>http://dev.menavip.com</stagingurl>
+            </settings>
+        </shiphappy>
+    </default>
+</config>
