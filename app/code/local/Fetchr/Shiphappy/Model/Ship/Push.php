@@ -49,15 +49,11 @@
                         continue;
                     }
                     $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
-                    if ($paymentType == 'Checkout.com') {
-                        $invoice->register()->pay();
-                    }
                     $invoice->getOrder()->setCustomerNoteNotify(false);
                     $invoice->getOrder()->setIsInProcess(true);
                     $transactionSave = Mage::getModel('core/resource_transaction')->addObject($invoice)->addObject($invoice->getOrder())->save();
                     if ($invoice->getId()) {
                         $paymentType = $order->getPayment()->getMethodInstance()->getCode();
-                        $store       = Mage::app()->getStore();
                         // Get Items Ordered Name
                         foreach ($order->getAllItems() as $item) {
                             if ($item['product_type'] == 'configurable') {
@@ -70,7 +66,7 @@
                                         "mobile" => $storeTelephone,
                                         "phone" => $storeTelephone,
                                         "name" => $store->getFrontendName(),
-                                        "address" => "Dubai"
+                                        "address" => $storeAddress
                                     ),
                                     'COD' => $order->getShippingAmount(),
                                     'price' => $item['price'],
@@ -102,7 +98,7 @@
                         $address = $order->getShippingAddress()->getData();
                         switch ($paymentType) {
                             case 'cashondelivery':
-                                case 'cashondelivery':
+                                case 'phoenix_cashondelivery':
                                 $paymentType = 'COD';
                                 $grandtotal  = $order->getGrandTotal();
                                 $discount    = $discountAmount;
@@ -142,7 +138,7 @@
                                     "username" => $this->userName,
                                     "password" => $this->password,
                                     "method" => 'create_orders',
-                                    "pickup_location" => 'Bur Dubai, UAE',
+                                    "pickup_location" => 'Dubai',
                                     "data" => array(
                                         array(
                                             "order_reference" => $order->getIncrementId(),
@@ -154,7 +150,7 @@
                                             "payment_type" => $paymentType,
                                             "amount" => $grandtotal,
                                             "description" => 'No',
-                                            "comments" => 'Any Comment'
+                                            "comments" => 'No'
                                         )
                                     )
                                 );
