@@ -138,7 +138,7 @@
                                     "username" => $this->userName,
                                     "password" => $this->password,
                                     "method" => 'create_orders',
-                                    "pickup_location" => 'Dubai',
+                                    "pickup_location" => $storeAddress,
                                     "data" => array(
                                         array(
                                             "order_reference" => $order->getIncrementId(),
