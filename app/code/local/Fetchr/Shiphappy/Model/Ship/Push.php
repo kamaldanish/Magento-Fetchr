@@ -31,7 +31,7 @@
         $collection = Mage::getModel('sales/order')->getCollection()->addFieldToFilter('main_table.status', array(
             array(
                 'in' => array(
-                    'processing'
+                    'fetchr_ship'
                 )
             )
         ));
@@ -45,14 +45,6 @@
                 foreach ($collection as $value) {
                     $order = Mage::getModel('sales/order')->load($value->getId());
                     $paymentType = $order->getPayment()->getMethodInstance()->getId();
-                    if (!$order->canInvoice()) {
-                        continue;
-                    }
-                    $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
-                    $invoice->getOrder()->setCustomerNoteNotify(false);
-                    $invoice->getOrder()->setIsInProcess(true);
-                    $transactionSave = Mage::getModel('core/resource_transaction')->addObject($invoice)->addObject($invoice->getOrder())->save();
-                    if ($invoice->getId()) {
                         $paymentType = $order->getPayment()->getMethodInstance()->getCode();
                         // Get Items Ordered Name
                         foreach ($order->getAllItems() as $item) {
@@ -98,7 +90,6 @@
                         $address = $order->getShippingAddress()->getData();
                         switch ($paymentType) {
                             case 'cashondelivery':
-                                case 'phoenix_cashondelivery':
                                 $paymentType = 'COD';
                                 $grandtotal  = $order->getGrandTotal();
                                 $discount    = $discountAmount;
@@ -121,7 +112,7 @@
                                             "status" => "",
                                             "discount" => $discount,
                                             "grand_total" => $grandtotal,
-                                            "customer_email" => $address['email'],
+                                            "customer_email" => $order->getCustomerEmail(),
                                             "order_id" => $order->getIncrementId(),
                                             "customer_firstname" => $address['firstname'],
                                             "payment_method" => $paymentType,
@@ -143,7 +134,7 @@
                                         array(
                                             "order_reference" => $order->getIncrementId(),
                                             "name" => $address['firstname'] . ' ' . $address['lastname'],
-                                            "email" => $address['email'],
+                                            "email" => $order->getCustomerEmail(),
                                             "phone_number" => $address['telephone'],
                                             "address" => $address['street'],
                                             "city" => $address['city'],
@@ -162,7 +153,6 @@
                         unset($dataErp, $itemArray);
                     }
                 }
-            }
             catch (Exception $e) {
                 echo (string) $e->getMessage();
             }
@@ -221,10 +211,11 @@
                     $url         = $baseurl . "/client/api/";
                     curl_setopt($ch, CURLOPT_URL, $url);
                     curl_setopt($ch, CURLOPT_POST, true);
+					curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
-                    $results = curl_exec($ch);
-                    print_r($results);
+					$results = curl_exec($ch);
+                    curl_close($ch);
+					print_r($results);
                     $varshipID     = $results;
                     $shipidexpStr  = explode("status", $varshipID);
                     $ResValShip    = $shipidexpStr[0];

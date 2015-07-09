@@ -62,7 +62,7 @@
             </Fetchr_Shiphappy_3>
         </jobs>
     </crontab>
-	<default>
+    <default>
         <shiphappy>
             <settings>
                 <liveurl>http://menavip.com</liveurl>
