@@ -1,2 +1,1 @@
-# Magento-Fetchr
-Fetchr Magento Shipping Integration
+# Fetchr-Magetno-Extension

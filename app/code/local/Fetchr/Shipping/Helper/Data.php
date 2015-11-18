@@ -17,20 +17,23 @@
  * versions in the future. If you wish to customize Fetchr Magento Extension (Fetchr Shiphappy) for your
  * needs please refer to http://www.fetchr.us for more information.
  *
- * @author     Danish Kamal
+ * @author     Islam Khalil
  * @package    Fetchr Shiphappy
- * Used in creating options for fulfilment|delivery config value selection
  * @copyright  Copyright (c) 2015 Fetchr (http://www.fetchr.us)
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
-
-class Fetchr_Shiphappy_Model_Servicetype
+class Fetchr_Shipping_Helper_Data extends Mage_Core_Helper_Abstract
 {
-    public function toOptionArray()
-    {
-        return array(
-            array('value'=>'fulfilment', 'label'=>Mage::helper('shiphappy')->__('Fulfilment + Delivery')),
-            array('value'=>'delivery', 'label'=>Mage::helper('shiphappy')->__('Delivery Only')),
-        );
+	protected $accountType;
+  	protected $serviceType;
+	protected $userName;
+    protected $password;
+    protected $userId;
+    protected $connections = array();
+        public function init() {
+        $this->accountType = Mage::getStoreConfig('carriers/fetchr/accounttype');
+        $this->serviceType = Mage::getStoreConfig('carriers/fetchr/servicetype');
+        $this->userName = Mage::getStoreConfig('carriers/fetchr/username');
+        $this->password = Mage::getStoreConfig('carriers/fetchr/password');
     }
 }

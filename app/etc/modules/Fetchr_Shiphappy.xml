@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-<config>
-    <modules>
-        <Fetchr_Shiphappy>
-            <active>true</active>
-            <codePool>local</codePool>
-        </Fetchr_Shiphappy>
-    </modules>
-</config>
