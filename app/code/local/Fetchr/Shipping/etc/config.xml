@@ -57,6 +57,18 @@
             </fetchr_shipping>
         </routers>
     </admin>
+    <crontab>
+        <jobs>
+            <order_status_update>
+                <schedule>
+                    <config_path>fetchr_shipping/settings/order_status_update</config_path>
+                </schedule>
+                <run>
+                    <model>shipping/ship_bulkstatus::run</model>
+                </run>
+            </order_status_update>
+        </jobs>
+    </crontab>
     <default>
         <carriers>
             <fetchr>
@@ -73,6 +85,7 @@
             <settings>
                 <liveurl>http://menavip.com</liveurl>
                 <stagingurl>http://dev.menavip.com</stagingurl>
+                <order_status_update>* * * * *</order_status_update>
             </settings>
         </fetchr_shipping>
     </default>
