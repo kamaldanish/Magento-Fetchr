@@ -229,7 +229,7 @@ class Fetchr_Shipping_Model_Observer{
                 // Setting The Comment in the Order view
                 if($ServiceType == 'fulfilment' ){
 
-                    $tracking_number    = $response['response']['tracking_no'];
+                    $tracking_number    = $response['tracking_no'];
                     $response['status'] = ($response['success'] == true ? 'success' : 'faild');
                     
                     if($response['awb'] == 'SKU not found'){
@@ -446,7 +446,7 @@ class Fetchr_Shipping_Model_Observer{
                 // Setting The Comment in the Order view
                 if($ServiceType == 'fulfilment' ){
 
-                    $tracking_number    = $response['response']['tracking_no'];
+                    $tracking_number    = $response['tracking_no'];
                     $response['status'] = ($response['success'] == true ? 'success' : 'faild');
                     
                     if($response['awb'] == 'SKU not found'){
@@ -554,10 +554,10 @@ class Fetchr_Shipping_Model_Observer{
                     $ERPdata        = 'ERPdata='.json_encode($data);
                     $merchant_name  = "MENA360 API";
                     $ch     = curl_init();
-                    $url    = $baseurl.'/client/gapicurl/';
+                    $url    = $baseurl.'/client/apifulfilment/';
                     curl_setopt($ch, CURLOPT_URL, $url);
                     curl_setopt($ch, CURLOPT_POST, true);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $ERPdata.'&erpuser='.$this->userName.'&erppassword='.$this->password.'&merchant_name='.$merchant_name);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $ERPdata.'&erpuser='.$this->userName.'&erppassword='.$this->password.'&merchant_name='.$this->userName);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                     $response = curl_exec($ch);
                     curl_close($ch);
@@ -569,7 +569,7 @@ class Fetchr_Shipping_Model_Observer{
                         return $response;
                     }
 
-                    if ($response['response']['awb'] == 'SKU not found') {
+                    if ($decoded_response['awb'] == 'SKU not found') {
                         $store = Mage::app()->getStore();
                         $cname = $store->getFrontendName();
                         $ch = curl_init();
@@ -582,7 +582,7 @@ class Fetchr_Shipping_Model_Observer{
                         curl_close($ch);
                     }
 
-                    if ($decoded_response['response']['tracking_no'] != '0') {
+                    if ($decoded_response['tracking_no'] != '0') {
                         return $decoded_response;
                     }
                 break;
