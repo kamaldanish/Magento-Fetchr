@@ -38,11 +38,11 @@ class Fetchr_Shipping_Model_Carrier extends Mage_Shipping_Model_Carrier_Abstract
     $method   = Mage::getModel('shipping/rate_result_method');
     
     $method->setCarrier($this->_code);
-    $method->setMethod($this->_code);
+    $method->setMethod('standard');
     $method->setCarrierTitle($this->getConfigData('title'));
-    $method->setMethodTitle($this->getConfigData('name'));
+    $method->setMethodTitle('Standard');
     $method->setPrice('10');
-    $method->setCost('10');
+    $method->setCost(0);
     $result->append($method);
  
     return $result;
@@ -51,26 +51,35 @@ class Fetchr_Shipping_Model_Carrier extends Mage_Shipping_Model_Carrier_Abstract
   public function getAllowedMethods()
   {
     return array(
-      'fetchr' => $this->getConfigData('name'),
+      'standard' => 'Standard',
     );
   }
  
-  protected function _getDefaultRate()
-  {
-    $rate = Mage::getModel('shipping/rate_result_method');
+  // protected function _getDefaultRate()
+  // {
+  //   $rate = Mage::getModel('shipping/rate_result_method');
      
-    $rate->setCarrier($this->_code);
-    $rate->setCarrierTitle($this->getConfigData('title'));
-    $rate->setMethod($this->_code);
-    $rate->setMethodTitle($this->getConfigData('name'));
-    $rate->setPrice($this->getConfigData('price'));
-    $rate->setCost(0);
+  //   $rate->setCarrier($this->_code);
+  //   $rate->setCarrierTitle($this->getConfigData('title'));
+  //   $rate->setMethod($this->_code);
+  //   $rate->setMethodTitle($this->getConfigData('name'));
+  //   $rate->setPrice($this->getConfigData('price'));
+  //   $rate->setCost(0);
      
-    return $rate;
-  }
+  //   return $rate;
+  // }
 
   public function isTrackingAvailable()
   {
       return true;
+  }
+
+  public function getTrackingInfo($tracking)
+  {
+      $track = Mage::getModel('shipping/tracking_result_status');
+      $track->setUrl('http://track.menavip.com/track.php?tracking_number=' . $tracking)
+          ->setTracking($tracking)
+          ->setCarrierTitle($this->getConfigData('name'));
+      return $track;
   }
 }
