@@ -52,7 +52,7 @@
                 <use>admin</use>
                 <args>
                     <module>Fetchr_Shipping</module>
-                    <frontName>fetchr</frontName>
+                    <frontName>shipping</frontName>
                 </args>
             </fetchr_shipping>
         </routers>
