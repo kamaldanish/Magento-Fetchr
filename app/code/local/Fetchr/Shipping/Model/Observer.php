@@ -106,9 +106,9 @@ class Fetchr_Shipping_Model_Observer{
             break;
         }
 
-        if ( $shippingmethod == 'fetchr_fetchr' && $paymentType == 'COD' && $autoCODPush == false){
+        if ( $shippingmethod == 'fetchr_standard' && $paymentType == 'COD' && $autoCODPush == false){
             return $this->pushCODOrder($order, $shipment);
-        }elseif($shippingmethod == 'fetchr_fetchr' && ($paymentType == 'CCOD' || $paymentType == 'cd') && $autoCCPush == false){
+        }elseif($shippingmethod == 'fetchr_standard' && ($paymentType == 'CCOD' || $paymentType == 'cd') && $autoCCPush == false){
             return $this->pushCCOrder($order, $shipment);
         }
     }
@@ -122,7 +122,7 @@ class Fetchr_Shipping_Model_Observer{
         $shippingmethod     = $order->getShippingMethod();
         $paymentType        = 'COD';
 
-        if ($collection->getData() && $shippingmethod == 'fetchr_fetchr' && $paymentType == 'COD') {
+        if ($collection->getData() && $shippingmethod == 'fetchr_standard' && $paymentType == 'COD') {
             
             $resource = Mage::getSingleton('core/resource');
             $adapter = $resource->getConnection('core_read');
@@ -225,9 +225,9 @@ class Fetchr_Shipping_Model_Observer{
                 
                 $response = $result[$order->getIncrementId()]['response_data'];
                 $comments = '';
-
+                
                 // Setting The Comment in the Order view
-                if($ServiceType == 'fulfilment' ){
+                if($ServiceType == 'fulfilment'){
 
                     $tracking_number    = $response['tracking_no'];
                     $response['status'] = ($response['success'] == true ? 'success' : 'faild');
@@ -300,6 +300,7 @@ class Fetchr_Shipping_Model_Observer{
                             $trackdata = array();
                             $trackdata['carrier_code'] = 'fetchr';
                             $trackdata['title'] = 'Fetchr';
+                            $trackdata['url'] = 'http://track.menavip.com/track.php?tracking_number='.$tracking_number;
                             $trackdata['number'] = $tracking_number;
                             $track = Mage::getModel('sales/order_shipment_track')->addData($trackdata);
                             
@@ -340,7 +341,7 @@ class Fetchr_Shipping_Model_Observer{
         $shippingmethod    = $order->getShippingMethod();
         $paymentType       = 'CCOD';
         
-        if ($collection->getData() && $shippingmethod == 'fetchr_fetchr' && $paymentType == 'CCOD' ) {
+        if ($collection->getData() && $shippingmethod == 'fetchr_standard' && $paymentType == 'CCOD' ) {
             $resource = Mage::getSingleton('core/resource');
             $adapter = $resource->getConnection('core_read');
             try {
