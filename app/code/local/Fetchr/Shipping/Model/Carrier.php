@@ -19,7 +19,7 @@
  *
  * @author     Islam Khalil
  * @package    Fetchr Shipping
- * Used in creating options for live|staging config value selection
+ * Used in creating options for fulfilment|delivery config value selection
  * @copyright  Copyright (c) 2015 Fetchr (http://www.fetchr.us)
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
@@ -37,22 +37,58 @@ class Fetchr_Shipping_Model_Carrier extends Mage_Shipping_Model_Carrier_Abstract
     $result   = Mage::getModel('shipping/rate_result');
     $method   = Mage::getModel('shipping/rate_result_method');
     
-    $method->setCarrier($this->_code);
-    $method->setMethod('standard');
-    $method->setCarrierTitle($this->getConfigData('title'));
-    $method->setMethodTitle('Standard');
-    $method->setPrice('10');
-    $method->setCost(0);
-    $result->append($method);
+    $allowedMethods = $this->getAllowedMethods();
+    $allowedMethods = explode(',', $allowedMethods);
+    
+    if(count($allowedMethods) == 1){
+
+      $methodName = $allowedMethods[0];
+      if($methodName == 'next_day'){
+        $result->append($this->_getStandardRate());  
+      }else{
+        $result->append($this->_getExpressRate());
+      }
+
+    }else{
+      $result->append($this->_getStandardRate());
+      $result->append($this->_getExpressRate());
+    }
  
     return $result;
   }
  
   public function getAllowedMethods()
   {
-    return array(
-      'standard' => 'Standard',
-    );
+
+    return $this->getConfigData('shippingoption');   
+  }
+ 
+  protected function _getStandardRate()
+  {
+    $rate = Mage::getModel('shipping/rate_result_method');
+     
+    $rate->setCarrier($this->_code);
+    $rate->setCarrierTitle($this->getConfigData('title'));
+    $rate->setMethod('next_day');
+    $rate->setMethodTitle('Next Day Delivery');
+    $rate->setPrice('0');
+    $rate->setCost('0');
+     
+    return $rate;
+  }
+
+  protected function _getExpressRate()
+  {
+    $rate = Mage::getModel('shipping/rate_result_method');
+     
+    $rate->setCarrier($this->_code);
+    $rate->setCarrierTitle($this->getConfigData('title'));
+    $rate->setMethod('same_day');
+    $rate->setMethodTitle('Same Day Delivery');
+    $rate->setPrice('0');
+    $rate->setCost('0');
+     
+    return $rate;
   }
 
   public function isTrackingAvailable()
