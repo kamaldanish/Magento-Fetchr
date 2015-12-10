@@ -1,26 +1,28 @@
 <?php
 /**
-* Fetchr.
-*
-* NOTICE OF LICENSE
-*
-* This source file is subject to the Open Software License (OSL 3.0)
-* It is also available through the world-wide-web at this URL:
-* https://fetchr.zendesk.com/hc/en-us/categories/200522821-Downloads
-* If you did not receive a copy of the license and are unable to
-* obtain it through the world-wide-web, please send an email
-* to ws@fetchr.us so we can send you a copy immediately.
-*
-* DISCLAIMER
-*
-* Do not edit or add to this file if you wish to upgrade Fetchr Magento Extension to newer
-* versions in the future. If you wish to customize Fetchr Magento Extension (Fetchr Shipping) for your
-* needs please refer to http://www.fetchr.us for more information.
-*
-* @author     Islam Khalil
-* @copyright  Copyright (c) 2015 Fetchr (http://www.fetchr.us)
-* @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
-*/
+ * Fetchr
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Open Software License (OSL 3.0)
+ * It is also available through the world-wide-web at this URL:
+ * https://fetchr.zendesk.com/hc/en-us/categories/200522821-Downloads
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to ws@fetchr.us so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade Fetchr Magento Extension to newer
+ * versions in the future. If you wish to customize Fetchr Magento Extension (Fetchr Shipping) for your
+ * needs please refer to http://www.fetchr.us for more information.
+ *
+ * @author     Islam Khalil
+ * @package    Fetchr Shipping
+ * Used in creating options for fulfilment|delivery config value selection
+ * @copyright  Copyright (c) 2015 Fetchr (http://www.fetchr.us)
+ * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ */
 class Fetchr_Shipping_Model_Observer{
 
     public function getCCTrackingNo($observer) {
@@ -106,9 +108,9 @@ class Fetchr_Shipping_Model_Observer{
             break;
         }
 
-        if ( $shippingmethod == 'fetchr_standard' && $paymentType == 'COD' && $autoCODPush == false){
+        if ( ($shippingmethod == 'fetchr_same_day' || $shippingmethod == 'fetchr_next_day') && $paymentType == 'COD' && $autoCODPush == false){
             return $this->pushCODOrder($order, $shipment);
-        }elseif($shippingmethod == 'fetchr_standard' && ($paymentType == 'CCOD' || $paymentType == 'cd') && $autoCCPush == false){
+        }elseif( ($shippingmethod == 'fetchr_same_day' || $shippingmethod == 'fetchr_next_day') && ($paymentType == 'CCOD' || $paymentType == 'cd') && $autoCCPush == false){
             return $this->pushCCOrder($order, $shipment);
         }
     }
@@ -122,10 +124,16 @@ class Fetchr_Shipping_Model_Observer{
         $shippingmethod     = $order->getShippingMethod();
         $paymentType        = 'COD';
 
-        if ($collection->getData() && $shippingmethod == 'fetchr_standard' && $paymentType == 'COD') {
+        //print_r($shippingmethod);die("hello");
+        if ($collection->getData() && ($shippingmethod == 'fetchr_same_day' || $shippingmethod == 'fetchr_next_day') && $paymentType == 'COD') {
             
-            $resource = Mage::getSingleton('core/resource');
-            $adapter = $resource->getConnection('core_read');
+            $resource       = Mage::getSingleton('core/resource');
+            $adapter        = $resource->getConnection('core_read');
+            
+            //Get the selected Fetchr Shipping method and put it in the datERP comment
+            $shippingoption         = explode('_', $shippingmethod);
+            $selectedShippingMethod = $shippingoption[1].'_'.$shippingoption[2];
+
             try {
                 foreach ($order->getAllVisibleItems() as $item) {
                     if ($item['product_type'] == 'configurable') {
@@ -214,7 +222,7 @@ class Fetchr_Shipping_Model_Observer{
                                 'payment_type' => $paymentType,
                                 'amount' => $grandtotal,
                                 'description' => 'No',
-                                'comments' => 'No',
+                                'comments' => $selectedShippingMethod,
                             ),
                         ),
                     );
@@ -340,8 +348,12 @@ class Fetchr_Shipping_Model_Observer{
         $storeAddress      = Mage::getStoreConfig('general/store_information/address');
         $shippingmethod    = $order->getShippingMethod();
         $paymentType       = 'CCOD';
+
+        //Get the selected Fetchr Shipping method and put it in the datERP comment
+        $shippingoption         = explode('_', $shippingmethod);
+        $selectedShippingMethod = $shippingoption[1].'_'.$shippingoption[2];
         
-        if ($collection->getData() && $shippingmethod == 'fetchr_standard' && $paymentType == 'CCOD' ) {
+        if ($collection->getData() && ($shippingmethod == 'fetchr_same_day' || $shippingmethod == 'fetchr_next_day') && $paymentType == 'CCOD' ) {
             $resource = Mage::getSingleton('core/resource');
             $adapter = $resource->getConnection('core_read');
             try {
@@ -432,7 +444,7 @@ class Fetchr_Shipping_Model_Observer{
                                 'payment_type' => $paymentType,
                                 'amount' => $grandtotal,
                                 'description' => 'No',
-                                'comments' => 'No',
+                                'comments' => $selectedShippingMethod,
                             ),
                         ),
                     );
