@@ -52,7 +52,7 @@
                 <use>admin</use>
                 <args>
                     <module>Fetchr_Shipping</module>
-                    <frontName>shipping</frontName>
+                    <frontName>fetchr</frontName>
                 </args>
             </fetchr_shipping>
         </routers>
@@ -64,7 +64,7 @@
                     <config_path>fetchr_shipping/settings/order_status_update</config_path>
                 </schedule>
                 <run>
-                    <model>shipping/ship_bulkstatus::run</model>
+                    <model>fetchr/ship_bulkstatus::run</model>
                 </run>
             </order_status_update>
         </jobs>
