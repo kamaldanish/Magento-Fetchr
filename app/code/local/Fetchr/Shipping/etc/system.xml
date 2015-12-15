@@ -87,6 +87,26 @@
               <show_in_website>1</show_in_website>
               <show_in_store>1</show_in_store>
             </autoccpush>
+            <samedaydeliveryrate translate="label tooltip comment">
+                <label>Same Day Delivery Rate</label>
+                <!-- <comment>Type The Username Provided By Fetchr</comment>
+                <tooltip>Type The Username Provided By Fetchr</tooltip> -->
+                <sort_order>56</sort_order>
+                <show_in_default>1</show_in_default>
+                <show_in_website>1</show_in_website>
+                <show_in_store>1</show_in_store>
+                <frontend_type>text</frontend_type>
+            </samedaydeliveryrate>
+            <nextdaydeliveryrate translate="label tooltip comment">
+                <label>Next Day Delivery Rate</label>
+                <!-- <comment>Type The Username Provided By Fetchr</comment>
+                <tooltip>Type The Username Provided By Fetchr</tooltip> -->
+                <sort_order>57</sort_order>
+                <show_in_default>1</show_in_default>
+                <show_in_website>1</show_in_website>
+                <show_in_store>1</show_in_store>
+                <frontend_type>text</frontend_type>
+            </nextdaydeliveryrate>
             <shippingoption translate="label">
               <label>Shipping Options</label>
               <frontend_type>multiselect</frontend_type>
