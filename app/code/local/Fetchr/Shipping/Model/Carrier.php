@@ -71,7 +71,7 @@ class Fetchr_Shipping_Model_Carrier extends Mage_Shipping_Model_Carrier_Abstract
     $rate->setCarrierTitle($this->getConfigData('title'));
     $rate->setMethod('next_day');
     $rate->setMethodTitle('Next Day Delivery');
-    $rate->setPrice('0');
+    $rate->setPrice($this->getConfigData('nextdaydeliveryrate'));
     $rate->setCost('0');
      
     return $rate;
@@ -85,7 +85,7 @@ class Fetchr_Shipping_Model_Carrier extends Mage_Shipping_Model_Carrier_Abstract
     $rate->setCarrierTitle($this->getConfigData('title'));
     $rate->setMethod('same_day');
     $rate->setMethodTitle('Same Day Delivery');
-    $rate->setPrice('0');
+    $rate->setPrice($this->getConfigData('samedaydeliveryrate'));
     $rate->setCost('0');
      
     return $rate;
