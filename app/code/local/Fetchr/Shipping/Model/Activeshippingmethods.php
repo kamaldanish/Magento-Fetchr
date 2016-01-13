@@ -24,13 +24,31 @@
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 
-class Fetchr_Shipping_Model_Shippingoption
+class Fetchr_Shipping_Model_Activeshippingmethods
 {
     public function toOptionArray()
     {
-        return array(
-            array('value'=>'same_day', 'label'=>Mage::helper('shipping')->__('Same Day Delivery')),
-            array('value'=>'next_day', 'label'=>Mage::helper('shipping')->__('Next Day Delivery')),
-        );
+        
+        //$methods = array(array('value'=>'','label'=>Mage::helper('adminhtml')->__('--Please Select--')));
+
+        $activeCarriers = Mage::getSingleton('shipping/config')->getActiveCarriers();
+        foreach($activeCarriers as $carrierCode => $carrierModel)
+        {
+           $options = array();
+           if( $carrierMethods = $carrierModel->getAllowedMethods() )
+           {
+               // foreach ($carrierMethods as $methodCode => $method)
+               // {
+               //      $code= $carrierCode.'_'.$methodCode;
+               //      $options[]=array('value'=>$code,'label'=>$method);
+
+               // }
+               $carrierTitle = Mage::getStoreConfig('carriers/'.$carrierCode.'/title');
+
+           }
+            $methods[]=array('value'=>$carrierCode,'label'=>$carrierTitle);
+        }
+        //print_r($methods);die("dv");
+        return $methods;
     }
 }

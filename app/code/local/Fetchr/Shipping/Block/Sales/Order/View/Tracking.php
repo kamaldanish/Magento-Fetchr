@@ -19,18 +19,10 @@
  *
  * @author     Danish Kamal
  * @package    Fetchr Shiphappy
- * Used in creating options for live|staging config value selection
  * @copyright  Copyright (c) 2015 Fetchr (http://www.fetchr.us)
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
-
-class Fetchr_Shipping_Model_Accounttype
+class Fetchr_Shipping_Block_Sales_Order_View_Tracking extends Mage_Core_Block_Template
 {
-    public function toOptionArray()
-    {
-        return array(
-            array('value'=>'staging', 'label'=>Mage::helper('shipping')->__('Staging')),
-            array('value'=>'live', 'label'=>Mage::helper('shipping')->__('Live')),
-        );
-    }
+	
 }

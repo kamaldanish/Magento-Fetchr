@@ -10,6 +10,11 @@
             <fetchr_shipping>
                 <class>Fetchr_Shipping_Model</class>
             </fetchr_shipping>
+            <shipping>
+                <rewrite>
+                    <shipping>Fetchr_Shipping_Model_Shipping</shipping>
+                </rewrite>
+            </shipping>
         </models>
         <helpers>
             <fetchr_shipping>

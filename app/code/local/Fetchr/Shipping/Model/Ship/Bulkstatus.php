@@ -18,8 +18,7 @@
   * versions in the future. If you wish to customize Fetchr Magento Extension (Fetchr Shipping) for your
   * needs please refer to http://www.fetchr.us for more information.
   *
-  * @author     Islam Khalil
-  * @package    Fetchr Shipping
+  * @author     Danish Kamal
   * @copyright  Copyright (c) 2015 Fetchr (http://www.fetchr.us)
   * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
   */
@@ -130,6 +129,7 @@ class Fetchr_Shipping_Model_Ship_Bulkstatus
             }elseif($erpStatus != 'Order Created'){
                 $lastComment    = explode(':', $lastFetchrComment);
                 $cmpResult      = strcmp($lastComment[1], $erpStatus);
+                //print_r($lastComment[1]);echo"<br />";print_r($erpStatus);die;
                 if($cmpResult !== 0){
                     $order->setStatus('processing')->save();
                     $order->addStatusHistoryComment('<strong>Fetchr Status: </strong>'.$erpStatus, false)->save();
