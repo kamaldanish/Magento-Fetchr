@@ -147,7 +147,7 @@ class Fetchr_Shipping_Model_Observer{
             //Get the selected Fetchr Shipping method and put it in the datERP comment
             $shippingmethod     = explode('_', $shippingmethod);
 
-            if(in_array($shippingmethod[0], $activeShippingMethods)){
+            if(in_array($shippingmethod[0], $activeShippingMethods) || $shippingmethod[0] == 'fetchr'){
                 $selectedShippingMethod = $shippingoption;
 
                 try {
@@ -392,7 +392,7 @@ class Fetchr_Shipping_Model_Observer{
 
             $shippingmethod     = explode('_', $shippingmethod);
 
-            if(in_array($shippingmethod[0], $activeShippingMethods)){
+            if(in_array($shippingmethod[0], $activeShippingMethods) || $shippingmethod[0] == 'fetchr'){
                 $selectedShippingMethod = $shippingoption;
                 try {
                     foreach ($order->getAllVisibleItems() as $item) {
