@@ -26,7 +26,6 @@ class Fetchr_Shipping_Model_Ship_Bulkstatus
 {
   public function run($force_order_update=false)
     {
-      die("ddddcc");
         if(!Mage::getStoreConfig('carriers/fetchr/active'))
             return;
         // if(!$force_order_update) {
