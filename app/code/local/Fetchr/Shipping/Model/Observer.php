@@ -155,6 +155,10 @@ class Fetchr_Shipping_Model_Observer{
                         //echo "<pre>";print_r($item);
                         if ($item['product_type'] == 'configurable') {
                             $item['qty_shipped'] = (isset($item['qty_shipped']) ? $item['qty_shipped'] : $item['qty_ordered']);
+                            
+                            //Hnadling & sympol chars in the items name
+                            $item['name'] = str_replace("&", ' And ', $item['name']);
+
                             $itemArray[] = array(
                                 'client_ref' => $order->getIncrementId(),
                                 'name' => $item['name'],
@@ -172,6 +176,10 @@ class Fetchr_Shipping_Model_Observer{
                             );
                         } else {
                             $item['qty_shipped'] = (isset($item['qty_shipped']) ? $item['qty_shipped'] : $item['qty_ordered']);
+                            
+                            //Hnadling & sympol chars in the items name
+                            $item['name'] = str_replace("&", ' And ', $item['name']);
+
                             $itemArray[] = array(
                                 'client_ref' => $order->getIncrementId(),
                                 'name' => $item['name'],
@@ -213,6 +221,11 @@ class Fetchr_Shipping_Model_Observer{
                     $this->userName     = Mage::getStoreConfig('carriers/fetchr/username');
                     $this->password     = Mage::getStoreConfig('carriers/fetchr/password');
                     $ServiceType        = $this->serviceType;
+
+                    //Handling Special chars in the address
+                    foreach ($address as $key => $value) {
+                        $address[$key] = str_replace("&", ' And ', $address[$key]); 
+                    }
 
                     switch ($ServiceType) {
                         case 'fulfilment':
@@ -397,11 +410,15 @@ class Fetchr_Shipping_Model_Observer{
                 try {
                     foreach ($order->getAllVisibleItems() as $item) {
                         if ($item['product_type'] == 'configurable') {
+
+                            //Hnadling & sympol chars in the items name
+                            $item['name'] = str_replace("&", ' And ', $item['name']);
+                            
                             $itemArray[] = array(
                                 'client_ref' => $order->getIncrementId(),
                                 'name' => $item['name'],
                                 'sku' => $item['sku'],
-                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered']) ? $item['qty_shipped'] : $item['qty_ordered'],//$item['qty_ordered'],
+                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered'] && $item['qty_shipped'] != '0' ) ? $item['qty_shipped'] : $item['qty_ordered'],//$item['qty_ordered'],
                                 'merchant_details' => array(
                                     'mobile' => $storeTelephone,
                                     'phone' => $storeTelephone,
@@ -413,11 +430,14 @@ class Fetchr_Shipping_Model_Observer{
                                 'is_voucher' => 'No',
                             );
                         } else {
+                            //Hnadling & sympol chars in the items name
+                            $item['name'] = str_replace("&", ' And ', $item['name']);
+                            
                             $itemArray[] = array(
                                 'client_ref' => $order->getIncrementId(),
                                 'name' => $item['name'],
                                 'sku' => $item['sku'],
-                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered']) ? $item['qty_shipped'] : $item['qty_ordered'],//$item['qty_ordered'],
+                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered'] && $item['qty_shipped'] != '0') ? $item['qty_shipped'] : $item['qty_ordered'],//$item['qty_ordered'],
                                 'merchant_details' => array(
                                     'mobile' => $storeTelephone,
                                     'phone' => $storeTelephone,
@@ -430,6 +450,7 @@ class Fetchr_Shipping_Model_Observer{
                             );
                         }
                     }
+                    
                     $discountAmount = 0;
                     if ($order->getDiscountAmount()) {
                         $discountAmount = abs($order->getDiscountAmount());
@@ -451,6 +472,11 @@ class Fetchr_Shipping_Model_Observer{
                     $this->userName     = Mage::getStoreConfig('carriers/fetchr/username');
                     $this->password     = Mage::getStoreConfig('carriers/fetchr/password');
                     $ServiceType        = $this->serviceType;
+
+                    //Handling Special chars in the address
+                    foreach ($address as $key => $value) {
+                        $address[$key] = str_replace("&", ' And ', $address[$key]); 
+                    }
 
                     switch ($ServiceType) {
                         case 'fulfilment':
