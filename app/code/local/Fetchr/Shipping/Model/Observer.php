@@ -277,29 +277,35 @@ class Fetchr_Shipping_Model_Observer{
                     $response = $result[$order->getIncrementId()]['response_data'];
                     $comments = '';
 
-                    // Setting The Comment in the Order view
-                    if($ServiceType == 'fulfilment'){
+                    if(!is_array($response)){        
+                        $response = explode('.', $response);
+                        $comments  .= '<strong>Fetchr Comment:</strong> the order was NOT pushed due to '.$response[0].' Error' ;
+                        $order->setStatus('pending');
+                        $order->addStatusHistoryComment($comments, false);
+                    }else{
+                        // Setting The Comment in the Order view
+                        if($ServiceType == 'fulfilment'){
+                            $tracking_number    = $response['tracking_no'];
+                            $response['status'] = ($response['success'] == true ? 'success' : 'faild');
 
-                        $tracking_number    = $response['tracking_no'];
-                        $response['status'] = ($response['success'] == true ? 'success' : 'faild');
+                            if($response['awb'] == 'SKU not found'){
+                                $comments  .= '<strong>Fetchr Comment:</strong> One Of The SKUs Are Not Added to Fetchr System, Please Contact one of Fetchr\'s Account Managers for More Details';
+                                $order->setStatus('pending');
+                                $order->addStatusHistoryComment($comments, false);
+                            }else{
+                                $comments  .= '<strong>Fetchr Status: Tracking URL </strong> http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                $order->setStatus('processing');
+                                $order->addStatusHistoryComment($comments, false);
+                            }
 
-                        if($response['awb'] == 'SKU not found'){
-                            $comments  .= '<strong>Fetchr Comment:</strong> One Of The SKUs Are Not Added to Fetchr System, Please Contact one of Fetchr\'s Account Managers for More Details';
-                            $order->setStatus('pending');
-                            $order->addStatusHistoryComment($comments, false);
-                        }else{
+                        }elseif($ServiceType == 'delivery') {
+                            $tracking_number    = $response[key($response)];
                             $comments  .= '<strong>Fetchr Status: Tracking URL </strong> http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
                             $order->setStatus('processing');
                             $order->addStatusHistoryComment($comments, false);
                         }
-
-                    }elseif ($ServiceType == 'delivery') {
-                        $tracking_number    = $response[key($response)];
-                        $comments  .= '<strong>Fetchr Status: Tracking URL </strong> http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
-                        $order->setStatus('processing');
-                        $order->addStatusHistoryComment($comments, false);
                     }
-
+                    
                     //COD Order Shipping And Invoicing
                     if($response['status'] == 'success'){
                         try {
@@ -410,15 +416,20 @@ class Fetchr_Shipping_Model_Observer{
                 try {
                     foreach ($order->getAllVisibleItems() as $item) {
                         if ($item['product_type'] == 'configurable') {
-
-                            //Hnadling & sympol chars in the items name
+                            if( isset($item['qty_shipped']) && $item['qty_shipped'] != '0'){
+                               $item['qty_shipped'] = $item['qty_shipped']; 
+                            }else{
+                                $item['qty_shipped'] = $item['qty_ordered'];
+                            }
+                            
+                            //Hnadling & sympol char in the items name
                             $item['name'] = str_replace("&", ' And ', $item['name']);
                             
                             $itemArray[] = array(
                                 'client_ref' => $order->getIncrementId(),
                                 'name' => $item['name'],
                                 'sku' => $item['sku'],
-                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered'] && $item['qty_shipped'] != '0' ) ? $item['qty_shipped'] : $item['qty_ordered'],//$item['qty_ordered'],
+                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered']) ? $item['qty_shipped'] : $item['qty_ordered'],//$item['qty_ordered'],
                                 'merchant_details' => array(
                                     'mobile' => $storeTelephone,
                                     'phone' => $storeTelephone,
@@ -430,14 +441,19 @@ class Fetchr_Shipping_Model_Observer{
                                 'is_voucher' => 'No',
                             );
                         } else {
+                            if( isset($item['qty_shipped']) && $item['qty_shipped'] != '0'){
+                               $item['qty_shipped'] = $item['qty_shipped']; 
+                            }else{
+                                $item['qty_shipped'] = $item['qty_ordered'];
+                            }
                             //Hnadling & sympol chars in the items name
                             $item['name'] = str_replace("&", ' And ', $item['name']);
-                            
+
                             $itemArray[] = array(
                                 'client_ref' => $order->getIncrementId(),
                                 'name' => $item['name'],
                                 'sku' => $item['sku'],
-                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered'] && $item['qty_shipped'] != '0') ? $item['qty_shipped'] : $item['qty_ordered'],//$item['qty_ordered'],
+                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered']) ? $item['qty_shipped'] : $item['qty_ordered'],//$item['qty_ordered'],
                                 'merchant_details' => array(
                                     'mobile' => $storeTelephone,
                                     'phone' => $storeTelephone,
