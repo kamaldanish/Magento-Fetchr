@@ -132,6 +132,7 @@ class Fetchr_Shipping_Model_Observer{
         $storeAddress       = Mage::getStoreConfig('general/store_information/address');
         $shippingmethod     = $order->getShippingMethod();
         $paymentType        = 'COD';
+        $clienUserName      = Mage::getStoreConfig('carriers/fetchr/username');
 
         // Get the selected shipping methods from the config of Fetchr Shipping
         // And Include them as they are fethcr. Refer to ---> https://docs.google.com/document/d/1oUosCu2at0U7rWCg24cN-gZHwfdCPPcIgkd6APHMthQ/edit?ts=567671b3
