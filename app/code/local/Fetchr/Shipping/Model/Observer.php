@@ -132,7 +132,6 @@ class Fetchr_Shipping_Model_Observer{
         $storeAddress       = Mage::getStoreConfig('general/store_information/address');
         $shippingmethod     = $order->getShippingMethod();
         $paymentType        = 'COD';
-        $clienUserName      = Mage::getStoreConfig('carriers/fetchr/username');
 
         // Get the selected shipping methods from the config of Fetchr Shipping
         // And Include them as they are fethcr. Refer to ---> https://docs.google.com/document/d/1oUosCu2at0U7rWCg24cN-gZHwfdCPPcIgkd6APHMthQ/edit?ts=567671b3
@@ -238,7 +237,7 @@ class Fetchr_Shipping_Model_Observer{
                                     'discount' => $discount,
                                     'grand_total' => $shippedGrandTotal,//$grandtotal,
                                     'customer_email' => $order->getCustomerEmail(),
-                                    'order_id' => $order->getIncrementId(),
+                                    'order_id' => $this->userName.'_'.$order->getIncrementId(),
                                     'customer_firstname' => $address['firstname'],
                                     'payment_method' => $paymentType,
                                     'customer_mobile' => $address['telephone'],
@@ -257,7 +256,7 @@ class Fetchr_Shipping_Model_Observer{
                             'pickup_location' => $storeAddress,
                             'data' => array(
                                 array(
-                                    'order_reference' => $order->getIncrementId(),
+                                    'order_reference' => $this->userName.'_'.$order->getIncrementId(),
                                     'name' => $address['firstname'].' '.$address['lastname'],
                                     'email' => $order->getCustomerEmail(),
                                     'phone_number' => $address['telephone'],
@@ -505,7 +504,7 @@ class Fetchr_Shipping_Model_Observer{
                                     'discount' => $discount,
                                     'grand_total' => '0',//$grandtotal,
                                     'customer_email' => $order->getCustomerEmail(),
-                                    'order_id' => $order->getIncrementId(),
+                                    'order_id' => $this->userName.'_'.$order->getIncrementId(),
                                     'customer_firstname' => $address['firstname'],
                                     'payment_method' => $paymentType,
                                     'customer_mobile' => ($address['telephone']?$address['telephone']:'N/A'),
@@ -524,7 +523,7 @@ class Fetchr_Shipping_Model_Observer{
                             'pickup_location' => $storeAddress,
                             'data' => array(
                                 array(
-                                    'order_reference' => $order->getIncrementId(),
+                                    'order_reference' => $this->userName.'_'.$order->getIncrementId(),
                                     'name' => $address['firstname'].' '.$address['lastname'],
                                     'email' => $order->getCustomerEmail(),
                                     'phone_number' => ($address['telephone']?$address['telephone']:'N/A'),
