@@ -416,7 +416,7 @@ class Fetchr_Shipping_Model_Observer{
                 try {
                     foreach ($order->getAllVisibleItems() as $item) {
                         if ($item['product_type'] == 'configurable') {
-                            if( isset($item['qty_shipped']) && $item['qty_shipped'] != '0'){
+                            if( isset($item['qty_shipped']) ){
                                $item['qty_shipped'] = $item['qty_shipped']; 
                             }else{
                                 $item['qty_shipped'] = $item['qty_ordered'];
@@ -441,7 +441,7 @@ class Fetchr_Shipping_Model_Observer{
                                 'is_voucher' => 'No',
                             );
                         } else {
-                            if( isset($item['qty_shipped']) && $item['qty_shipped'] != '0'){
+                            if( isset($item['qty_shipped']) ){
                                $item['qty_shipped'] = $item['qty_shipped']; 
                             }else{
                                 $item['qty_shipped'] = $item['qty_ordered'];
