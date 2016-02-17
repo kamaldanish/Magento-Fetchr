@@ -237,7 +237,7 @@ class Fetchr_Shipping_Model_Observer{
                                     'discount' => $discount,
                                     'grand_total' => $shippedGrandTotal,//$grandtotal,
                                     'customer_email' => $order->getCustomerEmail(),
-                                    'order_id' => $this->userName.'_'.$order->getIncrementId(),
+                                    'order_id' => $order->getIncrementId(),
                                     'customer_firstname' => $address['firstname'],
                                     'payment_method' => $paymentType,
                                     'customer_mobile' => $address['telephone'],
@@ -256,7 +256,7 @@ class Fetchr_Shipping_Model_Observer{
                             'pickup_location' => $storeAddress,
                             'data' => array(
                                 array(
-                                    'order_reference' => $this->userName.'_'.$order->getIncrementId(),
+                                    'order_reference' => $order->getIncrementId(),
                                     'name' => $address['firstname'].' '.$address['lastname'],
                                     'email' => $order->getCustomerEmail(),
                                     'phone_number' => $address['telephone'],
@@ -504,7 +504,7 @@ class Fetchr_Shipping_Model_Observer{
                                     'discount' => $discount,
                                     'grand_total' => '0',//$grandtotal,
                                     'customer_email' => $order->getCustomerEmail(),
-                                    'order_id' => $this->userName.'_'.$order->getIncrementId(),
+                                    'order_id' => $order->getIncrementId(),
                                     'customer_firstname' => $address['firstname'],
                                     'payment_method' => $paymentType,
                                     'customer_mobile' => ($address['telephone']?$address['telephone']:'N/A'),
@@ -523,7 +523,7 @@ class Fetchr_Shipping_Model_Observer{
                             'pickup_location' => $storeAddress,
                             'data' => array(
                                 array(
-                                    'order_reference' => $this->userName.'_'.$order->getIncrementId(),
+                                    'order_reference' => $order->getIncrementId(),
                                     'name' => $address['firstname'].' '.$address['lastname'],
                                     'email' => $order->getCustomerEmail(),
                                     'phone_number' => ($address['telephone']?$address['telephone']:'N/A'),
