@@ -216,7 +216,7 @@ class Fetchr_Shipping_Model_Observer{
                     $address        = $order->getShippingAddress()->getData();
                     //$grandtotal     = ($order->getGrandTotal() > $shippedGrandTotal) ? $shippedGrandTotal : $order->getGrandTotal() ;
                     $discount       = $discountAmount;
-                    //print_r($grandtotal);die("helloz");
+
                     $this->serviceType  = Mage::getStoreConfig('carriers/fetchr/servicetype');
                     $this->userName     = Mage::getStoreConfig('carriers/fetchr/username');
                     $this->password     = Mage::getStoreConfig('carriers/fetchr/password');
@@ -263,7 +263,7 @@ class Fetchr_Shipping_Model_Observer{
                                     'address' => $address['street'],
                                     'city' => $address['city'],
                                     'payment_type' => $paymentType,
-                                    'amount' => $shippedGrandTotal,
+                                    'amount' => $shippedGrandTotal - $discount,
                                     'description' => 'No',
                                     'comments' => $selectedShippingMethod,
                                 ),
