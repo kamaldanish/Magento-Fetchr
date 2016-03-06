@@ -116,7 +116,7 @@ class Fetchr_Shipping_Model_Observer{
         $shippingmethod     = explode('_', $shippingmethod);
 
         //if ( ($shippingmethod == 'fetchr_same_day' || $shippingmethod == 'fetchr_next_day') && $paymentType == 'COD' && $autoCODPush == false){
-        if( in_array($shippingmethod[0], $activeShippingMethods) && $paymentType == 'COD' && $autoCODPush == false ){
+        if( (in_array($shippingmethod[0], $activeShippingMethods) || $shippingmethod[0] == 'fetchr') && $paymentType == 'COD' && $autoCODPush == false ){
             return $this->pushCODOrder($order, $shipment);
         //}elseif( ($shippingmethod == 'fetchr_same_day' || $shippingmethod == 'fetchr_next_day') && ($paymentType == 'CCOD' || $paymentType == 'cd') && $autoCCPush == false){
         }elseif(in_array($shippingmethod[0], $activeShippingMethods) && ($paymentType == 'CCOD' || $paymentType == 'cd') && $autoCCPush == false){
@@ -154,16 +154,20 @@ class Fetchr_Shipping_Model_Observer{
                     foreach ($order->getAllVisibleItems() as $item) {
                         //echo "<pre>";print_r($item);
                         if ($item['product_type'] == 'configurable') {
-                            $item['qty_shipped'] = (isset($item['qty_shipped']) ? $item['qty_shipped'] : $item['qty_ordered']);
+                            if( isset($item['qty_shipped']) && !strcmp($item['qty_shipped'], "0.0000") ){
+                               $itemsToShip = $item['qty_shipped']; 
+                            }else{
+                                $itemsToShip = $item['qty_ordered'];
+                            }
                             
-                            //Hnadling & sympol chars in the items name
+                            //Hnadling & sympol char in the items name
                             $item['name'] = str_replace("&", ' And ', $item['name']);
 
                             $itemArray[] = array(
                                 'client_ref' => $order->getIncrementId(),
                                 'name' => $item['name'],
                                 'sku' => $item['sku'],
-                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered'] ? $item['qty_shipped'] : $item['qty_ordered']),
+                                'quantity' => ($itemsToShip != $item['qty_ordered'] ? $itemsToShip : $item['qty_ordered']),
                                 'merchant_details' => array(
                                     'mobile' => $storeTelephone,
                                     'phone' => $storeTelephone,
@@ -175,16 +179,20 @@ class Fetchr_Shipping_Model_Observer{
                                 'is_voucher' => 'No',
                             );
                         } else {
-                            $item['qty_shipped'] = (isset($item['qty_shipped']) ? $item['qty_shipped'] : $item['qty_ordered']);
+                            if( isset($item['qty_shipped']) && !strcmp($item['qty_shipped'], "0.0000") ){
+                               $itemsToShip = $item['qty_shipped']; 
+                            }else{
+                                $itemsToShip = $item['qty_ordered'];
+                            }
                             
-                            //Hnadling & sympol chars in the items name
+                            //Hnadling & sympol char in the items name
                             $item['name'] = str_replace("&", ' And ', $item['name']);
 
                             $itemArray[] = array(
                                 'client_ref' => $order->getIncrementId(),
                                 'name' => $item['name'],
                                 'sku' => $item['sku'],
-                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered'] ? $item['qty_shipped'] : $item['qty_ordered']),
+                                'quantity' => ($itemsToShip != $item['qty_ordered'] ? $itemsToShip : $item['qty_ordered']),
                                 'merchant_details' => array(
                                     'mobile' => $storeTelephone,
                                     'phone' => $storeTelephone,
@@ -348,7 +356,7 @@ class Fetchr_Shipping_Model_Observer{
                                     ->setData('order_id', $shipment->getData('order_id'));
 
                                 $track->save();
-                            }else{
+                            }
                                 //Create Shipment When Auto Push Is ON
                                 if ($order->canShip()) {
                                     $shipment = $order->prepareShipment($qty);
@@ -371,7 +379,6 @@ class Fetchr_Shipping_Model_Observer{
                                 } else {
                                     Mage::log('Order '.$orderId.' cannot be shipped!', null, 'fetchr.log');
                                 }
-                            }
 
                         }catch (Exception $e) {
                             $order->addStatusHistoryComment('Exception occurred during automaticallyInvoiceShipCompleteOrder action. Exception message: '.$e->getMessage(), false);
@@ -417,9 +424,9 @@ class Fetchr_Shipping_Model_Observer{
                     foreach ($order->getAllVisibleItems() as $item) {
                         if ($item['product_type'] == 'configurable') {
                             if( isset($item['qty_shipped']) && !strcmp($item['qty_shipped'], "0.0000") ){
-                               $item['qty_shipped'] = $item['qty_shipped']; 
+                               $itemsToShip = $item['qty_shipped']; 
                             }else{
-                                $item['qty_shipped'] = $item['qty_ordered'];
+                                $itemsToShip = $item['qty_ordered'];
                             }
                             
                             //Hnadling & sympol char in the items name
@@ -429,7 +436,7 @@ class Fetchr_Shipping_Model_Observer{
                                 'client_ref' => $order->getIncrementId(),
                                 'name' => $item['name'],
                                 'sku' => $item['sku'],
-                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered']) ? $item['qty_shipped'] : $item['qty_ordered'],//$item['qty_ordered'],
+                                'quantity' => ($itemsToShip != $item['qty_ordered']) ? $itemsToShip : $item['qty_ordered'],//$item['qty_ordered'],
                                 'merchant_details' => array(
                                     'mobile' => $storeTelephone,
                                     'phone' => $storeTelephone,
@@ -443,9 +450,9 @@ class Fetchr_Shipping_Model_Observer{
                         } else {
 
                             if( isset($item['qty_shipped']) && !strcmp($item['qty_shipped'], "0.0000") ){
-                               $item['qty_shipped'] = $item['qty_shipped']; 
+                               $itemsToShip = $item['qty_shipped']; 
                             }else{
-                                $item['qty_shipped'] = $item['qty_ordered'];
+                                $itemsToShip = $item['qty_ordered'];
                             }
                             //Hnadling & sympol chars in the items name
                             $item['name'] = str_replace("&", ' And ', $item['name']);
@@ -454,7 +461,7 @@ class Fetchr_Shipping_Model_Observer{
                                 'client_ref' => $order->getIncrementId(),
                                 'name' => $item['name'],
                                 'sku' => $item['sku'],
-                                'quantity' => ($item['qty_shipped'] != $item['qty_ordered']) ? $item['qty_shipped'] : $item['qty_ordered'],//$item['qty_ordered'],
+                                'quantity' => ($itemsToShip != $item['qty_ordered']) ? $itemsToShip : $item['qty_ordered'],//$item['qty_ordered'],
                                 'merchant_details' => array(
                                     'mobile' => $storeTelephone,
                                     'phone' => $storeTelephone,

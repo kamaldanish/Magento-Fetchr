@@ -91,13 +91,20 @@ class Fetchr_Shipping_Model_Ship_Bulkstatus
         $results = curl_exec($ch);
         $results = json_decode($results, true);
 
-        $orderComments = array();
+        $orderComments  = array();
         foreach ($results['response'] as $result) {
             $erpStatus  = $result['package_state'];
             $orderId    = $result['client_order_ref'];
+
+            //Check if the order ID has client username as prefix
+            if(strpos($orderId, '_') !== false){
+              $oids     = explode('_', $orderId);
+              $orderId  = $oids[1]; 
+            }
+
             $order      = Mage::getModel('sales/order')->loadByIncrementId($orderId);
             $comments   = $order->getStatusHistoryCollection();
-
+            
             //Get All The Comments
             foreach ($comments as $c) {
                 $orderComments[]    = $c->getData();
