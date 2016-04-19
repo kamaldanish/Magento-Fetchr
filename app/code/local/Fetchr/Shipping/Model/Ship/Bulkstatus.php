@@ -26,6 +26,7 @@ class Fetchr_Shipping_Model_Ship_Bulkstatus
 {
   public function run($force_order_update=false)
     {
+    Mage::log('Get bulk status started!', null, 'fetchr.log');  
         if(!Mage::getStoreConfig('carriers/fetchr/active'))
             return;
         // if(!$force_order_update) {
@@ -107,42 +108,50 @@ class Fetchr_Shipping_Model_Ship_Bulkstatus
             
             //Get All The Comments
             foreach ($comments as $c) {
-                $orderComments[]    = $c->getData();
+                $orderComments[$orderId][]    = $c->getData();
             }
-
+        
             //Get Fetchr Comments Only
-            foreach ($orderComments as $key => $comment) {
+            foreach ($orderComments[$orderId] as $key => $comment) {
                 $sw_fetchr    = strpos($comment['comment'], 'Fetchr');
                 if($sw_fetchr != false){
-                    $fetchrComments[] = $comment;
+                    $fetchrComments[$orderId][] = $comment;
                 }
             }
-
-            $lastFetchrComment  = $fetchrComments[0]['comment'];
+            
+            $lastFetchrComment  = $fetchrComments[$orderId][0]['comment'];
             $status_mapping = array(
                                 'Scheduled for delivery',
                                 'Order dispatched',
                                 'Returned to Client',
                                 'Customer care On hold',
                                 );
-
+    
+            $statusdiff     = strpos($lastFetchrComment, $erpStatus);
+            $paymentType    = $order->getPayment()->getMethodInstance()->getCode();          
+            
             if(strstr($erpStatus, 'Delivered') && $lastFetchrComment != null){
                 $deliveryDate = explode(' ', $erpStatus);
+
+                $order->setData('state', Mage_Sales_Model_Order::STATE_COMPLETE);
                 $order->setStatus('complete')->save();
                 $order->addStatusHistoryComment('<strong>Delivered By Fetchr On: </strong>'.$deliveryDate[2], false)->save();
+                
+                if($paymentType == 'cashondelivery' || $paymentType == 'phoenix_cashondelivery'){
+                    $order->setBaseTotalInvoiced($order->getBaseGrandTotal());
+                    $order->setBaseTotalPaid($order->getBaseGrandTotal());
+                }
+                $order->save();
+                
                 foreach ($order->getInvoiceCollection() as $inv) {
                     $inv->setState(Mage_Sales_Model_Order_Invoice::STATE_PAID)->save();
                 }
-            }elseif($erpStatus != 'Order Created'){
-                $lastComment    = explode(':', $lastFetchrComment);
-                $cmpResult      = strcmp($lastComment[1], $erpStatus);
-                //print_r($lastComment[1]);echo"<br />";print_r($erpStatus);die;
-                if($cmpResult !== 0){
-                    $order->setStatus('processing')->save();
-                    $order->addStatusHistoryComment('<strong>Fetchr Status: </strong>'.$erpStatus, false)->save();
-                }
+            }elseif($erpStatus != 'Order Created' && $statusdiff === false ){
+                $order->setStatus('processing')->save();
+                $order->addStatusHistoryComment('<strong>Fetchr Status: </strong>'.$erpStatus, false)->save();
             }
         }
+    Mage::log('Get bulk status completed', null, 'fetchr.log');
     return $results;
     }
 }

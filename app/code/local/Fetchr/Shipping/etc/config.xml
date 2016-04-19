@@ -40,7 +40,7 @@
                     </fetchr_shipping>
                 </observers>
             </sales_order_invoice_pay>
-            <sales_order_shipment_save_after>
+            <sales_order_shipment_save_before>
                 <observers>
                     <fetchr_shipping>
                         <type>singleton</type>
@@ -48,7 +48,7 @@
                         <method>pushOrderAfterShipmentCreation</method>
                     </fetchr_shipping>
                 </observers>
-            </sales_order_shipment_save_after>
+            </sales_order_shipment_save_before>
         </events>
     </global>
     <admin>

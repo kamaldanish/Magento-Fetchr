@@ -90,6 +90,7 @@ class Fetchr_Shipping_Model_Observer{
         $paymentType            = $order->getPayment()->getMethodInstance()->getCode();
         $autoCODPush            = Mage::getStoreConfig('carriers/fetchr/autocodpush');
         $autoCCPush             = Mage::getStoreConfig('carriers/fetchr/autoccpush');
+        $this->userName         = Mage::getStoreConfig('carriers/fetchr/username');
 
         // Get the selected shipping methods from the config of Fetchr Shipping
         // And Include them as they are fethcr. Refer to ---> https://docs.google.com/document/d/1oUosCu2at0U7rWCg24cN-gZHwfdCPPcIgkd6APHMthQ/edit?ts=567671b3
@@ -114,13 +115,25 @@ class Fetchr_Shipping_Model_Observer{
         }
 
         $shippingmethod     = explode('_', $shippingmethod);
+        $orderIsPushed      = Mage::getSingleton('core/session')->getOrderIsPushed();
+        $orderStatus        = $this->_checkIfOrderIsPushed($this->userName.'_'.$order->getIncrementId());
 
-        //if ( ($shippingmethod == 'fetchr_same_day' || $shippingmethod == 'fetchr_next_day') && $paymentType == 'COD' && $autoCODPush == false){
-        if( (in_array($shippingmethod[0], $activeShippingMethods) || $shippingmethod[0] == 'fetchr') && $paymentType == 'COD' && $autoCODPush == false ){
-            return $this->pushCODOrder($order, $shipment);
-        //}elseif( ($shippingmethod == 'fetchr_same_day' || $shippingmethod == 'fetchr_next_day') && ($paymentType == 'CCOD' || $paymentType == 'cd') && $autoCCPush == false){
-        }elseif(in_array($shippingmethod[0], $activeShippingMethods) && ($paymentType == 'CCOD' || $paymentType == 'cd') && $autoCCPush == false){
-            return $this->pushCCOrder($order, $shipment, $paymentType);
+        Mage::getSingleton('core/session')->unsOrderIsPushed();
+
+        if(isset($orderStatus['invalidcredential'])){
+            Mage::getSingleton('core/session')->addError('Invalid Username Or Password on Fetchr configuration');
+            Mage::app()->getResponse()->setRedirect($_SERVER['HTTP_REFERER']);
+            Mage::app()->getResponse()->sendResponse();
+            exit;
+        }
+
+        //Check if order already pushed
+        if($orderStatus['order_status'] == 'Order Not Found' ){
+            if( (in_array($shippingmethod[0], $activeShippingMethods) || $shippingmethod[0] == 'fetchr') && $paymentType == 'COD' ){
+                return $this->pushCODOrder($order, $shipment);
+            }elseif( (in_array($shippingmethod[0], $activeShippingMethods) || $shippingmethod[0] == 'fetchr') && ($paymentType == 'CCOD' || $paymentType == 'cd') ){
+                return $this->pushCCOrder($order, $shipment, $paymentType);
+            }
         }
     }
 
@@ -139,8 +152,7 @@ class Fetchr_Shipping_Model_Observer{
         $activeShippingMethods  = explode(',', $activeShippingMethods);
 
 
-        //if ($collection->getData() && ($shippingmethod == 'fetchr_same_day' || $shippingmethod == 'fetchr_next_day') && $paymentType == 'COD') {
-          if ($collection->getData() && $paymentType == 'COD') {
+        if ($collection->getData() && $paymentType == 'COD') {
             $resource   = Mage::getSingleton('core/resource');
             $adapter    = $resource->getConnection('core_read');
 
@@ -149,59 +161,72 @@ class Fetchr_Shipping_Model_Observer{
 
             if(in_array($shippingmethod[0], $activeShippingMethods) || $shippingmethod[0] == 'fetchr'){
                 $selectedShippingMethod = $shippingoption;
-
+                
                 try {
                     foreach ($order->getAllVisibleItems() as $item) {
-                        //echo "<pre>";print_r($item);
-                        if ($item['product_type'] == 'configurable') {
-                            if( isset($item['qty_shipped']) && !strcmp($item['qty_shipped'], "0.0000") ){
-                               $itemsToShip = $item['qty_shipped']; 
-                            }else{
-                                $itemsToShip = $item['qty_ordered'];
-                            }
-                            
-                            //Hnadling & sympol char in the items name
-                            $item['name'] = str_replace("&", ' And ', $item['name']);
+                        
+                        //Replace Special characters in the items name
+                        $item['name'] = strtr ($item['name'], array ('"' => ' Inch ', '&' => ' And '));
 
+                        //Get Shipment ID when its not empty
+                        if(!empty($shipment)){
+                            $shipmentColl   = $order->getShipmentsCollection()->getFirstItem();
+                            $shipmentId     = $shipmentColl->getIncrementId();
+                        }
+
+                        if($item['product_type'] == 'bundle'){
+                            
+                            $product    = Mage::getModel('catalog/product')->load($item->getProductId());
+                            $parentSku  = $product->getSku();
+                            $skuArray   = explode($parentSku.'-', $item['sku']);
+                            $childSku   = $skuArray[1];
+                            
                             $itemArray[] = array(
-                                'client_ref' => $order->getIncrementId(),
-                                'name' => $item['name'],
-                                'sku' => $item['sku'],
-                                'quantity' => ($itemsToShip != $item['qty_ordered'] ? $itemsToShip : $item['qty_ordered']),
-                                'merchant_details' => array(
-                                    'mobile' => $storeTelephone,
-                                    'phone' => $storeTelephone,
-                                    'name' => $store->getFrontendName(),
-                                    'address' => $storeAddress,
+                                'client_ref'        => $order->getIncrementId(),
+                                'name'              => $item['name'],
+                                'sku'               => $childSku,
+                                'quantity'          => $item['qty_ordered'],
+                                'merchant_details'  => array(
+                                    'mobile'    => $storeTelephone,
+                                    'phone'     => $storeTelephone,
+                                    'name'      => $store->getFrontendName(),
+                                    'address'   => $storeAddress,
                                 ),
-                                'COD' => $order->getShippingAmount(),
-                                'price' => $item['price'],
-                                'is_voucher' => 'No',
+                                'COD'               => $order->getShippingAmount(),
+                                'price'             => $item['price'],
+                                'is_voucher'        => 'No',
+                            );
+                        }elseif ($item['product_type'] == 'configurable') {
+                            $itemArray[] = array(
+                                'client_ref'        => $order->getIncrementId(),
+                                'name'              => $item['name'],
+                                'sku'               => $item['sku'],
+                                'quantity'          => $item['qty_ordered'],
+                                'merchant_details'  => array(
+                                    'mobile'    => $storeTelephone,
+                                    'phone'     => $storeTelephone,
+                                    'name'      => $store->getFrontendName(),
+                                    'address'   => $storeAddress,
+                                ),
+                                'COD'               => $order->getShippingAmount(),
+                                'price'             => $item['price'],
+                                'is_voucher'        => 'No',
                             );
                         } else {
-                            if( isset($item['qty_shipped']) && !strcmp($item['qty_shipped'], "0.0000") ){
-                               $itemsToShip = $item['qty_shipped']; 
-                            }else{
-                                $itemsToShip = $item['qty_ordered'];
-                            }
-                            
-                            //Hnadling & sympol char in the items name
-                            $item['name'] = str_replace("&", ' And ', $item['name']);
-
                             $itemArray[] = array(
-                                'client_ref' => $order->getIncrementId(),
-                                'name' => $item['name'],
-                                'sku' => $item['sku'],
-                                'quantity' => ($itemsToShip != $item['qty_ordered'] ? $itemsToShip : $item['qty_ordered']),
-                                'merchant_details' => array(
-                                    'mobile' => $storeTelephone,
-                                    'phone' => $storeTelephone,
-                                    'name' => $store->getFrontendName(),
-                                    'address' => $storeAddress,
+                                'client_ref'        => $order->getIncrementId(),
+                                'name'              => $item['name'],
+                                'sku'               => $item['sku'],
+                                'quantity'          => $item['qty_ordered'],
+                                'merchant_details'  => array(
+                                    'mobile'    => $storeTelephone,
+                                    'phone'     => $storeTelephone,
+                                    'name'      => $store->getFrontendName(),
+                                    'address'   => $storeAddress,
                                 ),
-                                'COD' => $order->getShippingAmount(),
-                                'price' => $item['price'],
-                                'is_voucher' => 'No',
+                                'COD'               => $order->getShippingAmount(),
+                                'price'             => $item['price'],
+                                'is_voucher'        => 'No',
                             );
                         }
                     }
@@ -209,7 +234,6 @@ class Fetchr_Shipping_Model_Observer{
                     //handling the grand total for partial shipment
                     $shippedGrandTotal = 0;
                     foreach ($itemArray as $items) {
-                        //echo "<pre>";print_r($items);die("ge");
                         $shippedGrandTotal += $items['price'] * $items['quantity'];
                     }
 
@@ -222,172 +246,187 @@ class Fetchr_Shipping_Model_Observer{
                     }
 
                     $address        = $order->getShippingAddress()->getData();
-                    //$grandtotal     = ($order->getGrandTotal() > $shippedGrandTotal) ? $shippedGrandTotal : $order->getGrandTotal() ;
                     $discount       = $discountAmount;
 
                     $this->serviceType  = Mage::getStoreConfig('carriers/fetchr/servicetype');
-                    $this->userName     = Mage::getStoreConfig('carriers/fetchr/username');
                     $this->password     = Mage::getStoreConfig('carriers/fetchr/password');
+                    $this->userName     = Mage::getStoreConfig('carriers/fetchr/username');
                     $ServiceType        = $this->serviceType;
-
+                    
                     //Handling Special chars in the address
                     foreach ($address as $key => $value) {
-                        $address[$key] = str_replace("&", ' And ', $address[$key]); 
+                        $address[$key] = strtr ($address[$key], array ('"' => ' ', '&' => ' And ')); 
                     }
 
+                    $erpOrderId     = $this->userName.'_'.$order->getIncrementId();
+                    
                     switch ($ServiceType) {
                         case 'fulfilment':
                         $dataErp[] = array(
                             'order' => array(
                                 'items' => $itemArray,
                                 'details' => array(
-                                    'status' => '',
-                                    'discount' => $discount,
-                                    'grand_total' => $shippedGrandTotal,//$grandtotal,
-                                    'customer_email' => $order->getCustomerEmail(),
-                                    'order_id' => $this->userName.'_'.$order->getIncrementId(),
-                                    'customer_firstname' => $address['firstname'],
-                                    'payment_method' => $paymentType,
-                                    'customer_mobile' => $address['telephone'],
-                                    'customer_lastname' => $address['lastname'],
-                                    'order_country' => $address['country_id'],
-                                    'order_address' => $address['street'].', '.$address['city'].', '.$address['country_id'],
+                                    'status'                => '',
+                                    'discount'              => $discount,
+                                    'grand_total'           => $shippedGrandTotal,
+                                    'customer_email'        => $order->getCustomerEmail(),
+                                    'order_id'              => $erpOrderId,
+                                    'customer_firstname'    => $address['firstname'],
+                                    'payment_method'        => $paymentType,
+                                    'customer_mobile'       => $address['telephone'],
+                                    'customer_lastname'     => $address['lastname'],
+                                    'order_country'         => $address['country_id'],
+                                    'order_address'         => $address['street'].', '.$address['city'].', '.$address['country_id'],
                                 ),
                             ),
                         );
                         break;
                         case 'delivery':
                         $dataErp = array(
-                            'username' => $this->userName,
-                            'password' => $this->password,
-                            'method' => 'create_orders',
-                            'pickup_location' => $storeAddress,
+                            'username'          => $this->userName,
+                            'password'          => $this->password,
+                            'method'            => 'create_orders',
+                            'pickup_location'   => $storeAddress,
                             'data' => array(
                                 array(
-                                    'order_reference' => $this->userName.'_'.$order->getIncrementId(),
-                                    'name' => $address['firstname'].' '.$address['lastname'],
-                                    'email' => $order->getCustomerEmail(),
-                                    'phone_number' => $address['telephone'],
-                                    'address' => $address['street'],
-                                    'city' => $address['city'],
-                                    'payment_type' => $paymentType,
-                                    'amount' => $shippedGrandTotal - $discount,
-                                    'description' => 'No',
-                                    'comments' => $selectedShippingMethod,
+                                    'order_reference'   => $erpOrderId,
+                                    'name'              => $address['firstname'].' '.$address['lastname'],
+                                    'email'             => $order->getCustomerEmail(),
+                                    'phone_number'      => $address['telephone'],
+                                    'address'           => $address['street'],
+                                    'city'              => $address['city'],
+                                    'payment_type'      => $paymentType,
+                                    'amount'            => $shippedGrandTotal - $discount,
+                                    'description'       => 'No',
+                                    'comments'          => $selectedShippingMethod,
                                 ),
                             ),
                         );
                     }
 
-                    $result[$order->getIncrementId()]['request_data'] = $dataErp;
-                    $result[$order->getIncrementId()]['response_data'] = $this->_sendDataToErp($dataErp, $order->getIncrementId());
+                    //Check if order already pushed
+                    $orderIsPushed = $this->_checkIfOrderIsPushed($this->userName.'_'.$order->getIncrementId());
 
-                    $response = $result[$order->getIncrementId()]['response_data'];
-                    $comments = '';
+                    if($orderIsPushed['order_status'] == 'Order Not Found'){
+                        $result[$order->getIncrementId()]['request_data']   = $dataErp;
+                        $result[$order->getIncrementId()]['response_data']  = $this->_sendDataToErp($dataErp, $order->getIncrementId());
 
-                    if(!is_array($response)){        
-                        $response = explode('.', $response);
-                        $comments  .= '<strong>Fetchr Comment:</strong> the order was NOT pushed due to '.$response[0].' Error' ;
-                        $order->setStatus('pending');
-                        $order->addStatusHistoryComment($comments, false);
-                    }else{
-                        // Setting The Comment in the Order view
-                        if($ServiceType == 'fulfilment'){
-                            $tracking_number    = $response['tracking_no'];
-                            $response['status'] = ($response['success'] == true ? 'success' : 'faild');
+                        $response = $result[$order->getIncrementId()]['response_data'];
+                        $comments = '';
 
-                            if($response['awb'] == 'SKU not found'){
-                                $comments  .= '<strong>Fetchr Comment:</strong> One Of The SKUs Are Not Added to Fetchr System, Please Contact one of Fetchr\'s Account Managers for More Details';
-                                $order->setStatus('pending');
-                                $order->addStatusHistoryComment($comments, false);
-                            }else{
-                                $comments  .= '<strong>Fetchr Status: Tracking URL </strong> http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
-                                $order->setStatus('processing');
-                                $order->addStatusHistoryComment($comments, false);
-                            }
-
-                        }elseif($ServiceType == 'delivery') {
-                            $tracking_number    = $response[key($response)];
-                            $comments  .= '<strong>Fetchr Status: Tracking URL </strong> http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
-                            $order->setStatus('processing');
+                        if(!is_array($response)){        
+                            $response   = explode('.', $response);
+                            $comments  .= '<strong>Fetchr Status:Faild,</strong> Order was <strong>NOT</strong> pushed due to <strong>'.$response[0].'</strong> Error, Please contact one of <strong>Fetchr\'s</strong> account managers and try again later' ;
+                            $order->setStatus('pending');
                             $order->addStatusHistoryComment($comments, false);
-                        }
-                    }
-                    
-                    //COD Order Shipping And Invoicing
-                    if($response['status'] == 'success'){
-                        try {
-                            //Get Order Qty
-                            $qty = array();
-                            foreach ($order->getAllVisibleItems() as $item) {
-                                $product_id             = $item->getProductId();
-                                $Itemqty                = $item->getQtyOrdered() - $item->getQtyShipped() - $item->getQtyRefunded() - $item->getQtyCanceled();
-                                $qty[$item->getId()]    = $Itemqty;
-                            }
+                        }else{
+                            // Setting The Comment in the Order view
+                            if($ServiceType == 'fulfilment'){
+                                $tracking_number    = $response['tracking_no'];
+                                $response['status'] = ($response['success'] == true ? 'success' : 'faild');
 
-                            //Invoicing
-                            if($order->canInvoice()) {
-                                $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
-                                $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::CAPTURE_OFFLINE);
-                                $invoice->setState(Mage_Sales_Model_Order_Invoice::STATE_OPEN)->save();
-
-                                $transactionSave = Mage::getModel('core/resource_transaction')
-                                ->addObject($invoice)
-                                ->addObject($invoice->getOrder());
-
-                                $transactionSave->save();
-                                Mage::log('Order '.$orderId.' has been invoiced!', null, 'fetchr.log');
-                            }else{
-                                Mage::log('Order '.$orderId.' cannot be invoiced!', null, 'fetchr.log');
-                            }
-
-                            //Create Shipment When Auto Push Is OFF
-                            if(!empty($shipment)){
-                                //$shipment = $shipment->getData();
-                                $trackdata = array();
-                                $trackdata['carrier_code'] = 'fetchr';
-                                $trackdata['title'] = 'Fetchr';
-                                $trackdata['number'] = $tracking_number;
-                                $track = Mage::getModel('sales/order_shipment_track')
-                                    ->setShipment($shipment)
-                                    ->setData('title', $trackdata['title']) // User syntax correct name here
-                                    ->setData('number', $trackdata['number'])
-                                    ->setData('carrier_code', $trackdata['carrier_code']) // use code that matches DB code for ship method here
-                                    ->setData('order_id', $shipment->getData('order_id'));
-
-                                $track->save();
-                            }
-                                //Create Shipment When Auto Push Is ON
-                                if ($order->canShip()) {
-                                    $shipment = $order->prepareShipment($qty);
-
-                                    $trackdata = array();
-                                    $trackdata['carrier_code'] = 'fetchr';
-                                    $trackdata['title'] = 'Fetchr';
-                                    $trackdata['url'] = 'http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
-                                    $trackdata['number'] = $tracking_number;
-                                    $track = Mage::getModel('sales/order_shipment_track')->addData($trackdata);
-
-                                    $shipment->addTrack($track);
-                                    //$shipment->register();
-                                    $transactionSave = Mage::getModel('core/resource_transaction')
-                                    ->addObject($shipment)
-                                    ->addObject($shipment->getOrder())
-                                    ->save();
-
-                                    Mage::log('Order '.$orderId.' has been shipped!', null, 'fetchr.log');
-                                } else {
-                                    Mage::log('Order '.$orderId.' cannot be shipped!', null, 'fetchr.log');
+                                if($response['awb'] == 'SKU not found'){
+                                    $comments  .= '<strong>Fetchr Status:Faild,</strong> Order was <strong>NOT</strong> pushed because One Of The SKUs Are Not Added on <strong>Fetchr</strong> System, Please Contact one of <strong>Fetchr\'s</strong> Account Managers for More Details';
+                                    $order->setStatus('pending');
+                                    $order->addStatusHistoryComment($comments, false);
+                                }else{
+                                    $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is : http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                    $order->setState(Mage_Sales_Model_Order::STATE_PROCESSING, true);
+                                    $order->setStatus('processing');
+                                    $order->addStatusHistoryComment($comments, false);
+                                    $order->save();
                                 }
 
-                        }catch (Exception $e) {
-                            $order->addStatusHistoryComment('Exception occurred during automaticallyInvoiceShipCompleteOrder action. Exception message: '.$e->getMessage(), false);
-                            $order->save();
+                            }elseif($ServiceType == 'delivery') {
+                                $tracking_number    = $response[key($response)];
+                                $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is :  http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                $order->setState(Mage_Sales_Model_Order::STATE_PROCESSING, true);
+                                $order->setStatus('processing');
+                                $order->addStatusHistoryComment($comments, false);
+                                $order->save();
+                            }
                         }
-                    }
-                    //End COD Order Shipping And Invoicing
 
-                    unset($dataErp, $itemArray);
+                        //COD Order Shipping And Invoicing
+                        if($response['status'] == 'success'){
+                            try {
+
+                                Mage::getSingleton('core/session')->setOrderIsPushed(true);
+                                
+                                //Get Order Qty
+                                $qty = array();
+                                foreach ($order->getAllVisibleItems() as $item) {
+                                    $product_id             = $item->getProductId();
+                                    $Itemqty                = $item->getQtyOrdered() - $item->getQtyShipped() - $item->getQtyRefunded() - $item->getQtyCanceled();
+                                    $qty[$item->getId()]    = $Itemqty;
+                                }
+
+                                //Invoicing
+                                if($order->canInvoice()) {
+                                    $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
+                                    $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::CAPTURE_OFFLINE);
+                                    $invoice->setState(Mage_Sales_Model_Order_Invoice::STATE_OPEN)->save();
+
+                                    $transactionSave = Mage::getModel('core/resource_transaction')
+                                    ->addObject($invoice)
+                                    ->addObject($invoice->getOrder());
+
+                                    $transactionSave->save();
+                                    
+                                    //To count the order in the sales order report(link in My5)
+                                    $order->setBaseTotalInvoiced('0.0000');
+                                    $order->setBaseTotalDue($order->getBaseGrandTotal());
+                                    
+                                    Mage::log('Order '.$orderId.' has been invoiced!', null, 'fetchr.log');
+                                }else{
+                                    Mage::log('Order '.$orderId.' cannot be invoiced!', null, 'fetchr.log');
+                                }
+
+                                //Create Shipment When Auto Push Is OFF
+                                if(!empty($shipment)){
+                                    $trackdata = array();
+                                    $trackdata['carrier_code']  = 'fetchr';
+                                    $trackdata['title']         = 'Fetchr';
+                                    $trackdata['number']        = $tracking_number;
+                                    
+                                    $track = Mage::getModel('sales/order_shipment_track')->addData($trackdata);
+                                    $shipment->addTrack($track);
+                                }else{
+                                    //Create Shipment When Auto Push Is ON
+                                    if ($order->canShip()) {
+                                        $shipment = $order->prepareShipment($qty);
+
+                                        $trackdata = array();
+                                        $trackdata['carrier_code'] = 'fetchr';
+                                        $trackdata['title'] = 'Fetchr';
+                                        $trackdata['url'] = 'http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                        $trackdata['number'] = $tracking_number;
+                                        $track = Mage::getModel('sales/order_shipment_track')->addData($trackdata);
+
+                                        $shipment->addTrack($track);
+                                        //$shipment->register();
+                                        $transactionSave = Mage::getModel('core/resource_transaction')
+                                        ->addObject($shipment)
+                                        ->addObject($shipment->getOrder())
+                                        ->save();
+
+                                        Mage::log('Order '.$orderId.' has been shipped!', null, 'fetchr.log');
+                                    } else {
+                                        Mage::log('Order '.$orderId.' cannot be shipped!', null, 'fetchr.log');
+                                    }
+                                }
+                            }catch (Exception $e) {
+                                $order->addStatusHistoryComment('Exception occurred during automaticallyInvoiceShipCompleteOrder action. Exception message: '.$e->getMessage(), false);
+                                $order->save();
+                            }
+                        }
+                        //End COD Order Shipping And Invoicing
+                        unset($dataErp, $itemArray);
+                    }else{
+                        $comments  .= '<strong>Fetchr Status:Faild,</strong> Order was <strong>NOT</strong> pushed due to <strong>'.reset($orderIsPushed).'</strong> Error, Please contact one of <strong>Fetchr\'s</strong> account managers and try again later ' ;
+                        $order->setStatus('pending');
+                        $order->addStatusHistoryComment($comments, false);
+                    }
 
                 } catch (Exception $e) {
                         echo (string) $e->getMessage();
@@ -411,7 +450,6 @@ class Fetchr_Shipping_Model_Observer{
         $activeShippingMethods  = Mage::getStoreConfig('carriers/fetchr/activeshippingmethods');
         $activeShippingMethods  = explode(',', $activeShippingMethods);
 
-        //if ($collection->getData() && ($shippingmethod == 'fetchr_same_day' || $shippingmethod == 'fetchr_next_day') && $paymentType == 'CCOD' ) {
         if( $collection->getData() && ($paymentType == 'CCOD' || $paymentType == 'cd') ){
             $resource = Mage::getSingleton('core/resource');
             $adapter = $resource->getConnection('core_read');
@@ -422,55 +460,67 @@ class Fetchr_Shipping_Model_Observer{
                 $selectedShippingMethod = $shippingoption;
                 try {
                     foreach ($order->getAllVisibleItems() as $item) {
-                        if ($item['product_type'] == 'configurable') {
-                            if( isset($item['qty_shipped']) && !strcmp($item['qty_shipped'], "0.0000") ){
-                               $itemsToShip = $item['qty_shipped']; 
-                            }else{
-                                $itemsToShip = $item['qty_ordered'];
-                            }
+                        
+                        //Hnadling Special characters in the items name
+                        $item['name'] = strtr ($item['name'], array ('"' => ' Inch ', '&' => ' And '));
+
+                        if($item['product_type'] == 'bundle'){
                             
-                            //Hnadling & sympol char in the items name
-                            $item['name'] = str_replace("&", ' And ', $item['name']);
+                            $product    = Mage::getModel('catalog/product')->load($item->getProductId());
+                            $parentSku  = $product->getSku();
+                            $skuArray   = explode($parentSku.'-', $item['sku']);
+                            $childSku   = $skuArray[1];
                             
                             $itemArray[] = array(
-                                'client_ref' => $order->getIncrementId(),
-                                'name' => $item['name'],
-                                'sku' => $item['sku'],
-                                'quantity' => ($itemsToShip != $item['qty_ordered']) ? $itemsToShip : $item['qty_ordered'],//$item['qty_ordered'],
-                                'merchant_details' => array(
-                                    'mobile' => $storeTelephone,
-                                    'phone' => $storeTelephone,
-                                    'name' => $store->getFrontendName(),
-                                    'address' => $storeAddress,
+                                'client_ref'        => $order->getIncrementId(),
+                                'name'              => $item['name'],
+                                'sku'               => $childSku,
+                                'quantity'          => $item['qty_ordered'],
+                                'merchant_details'  => array(
+                                    'mobile'    => $storeTelephone,
+                                    'phone'     => $storeTelephone,
+                                    'name'      => $store->getFrontendName(),
+                                    'address'   => $storeAddress,
                                 ),
-                                'COD' => $order->getShippingAmount(),
-                                'price' => $item['price'],
-                                'is_voucher' => 'No',
+                                'COD'               => $order->getShippingAmount(),
+                                'price'             => $item['price'],
+                                'is_voucher'        => 'No',
                             );
-                        } else {
 
-                            if( isset($item['qty_shipped']) && !strcmp($item['qty_shipped'], "0.0000") ){
-                               $itemsToShip = $item['qty_shipped']; 
-                            }else{
-                                $itemsToShip = $item['qty_ordered'];
-                            }
-                            //Hnadling & sympol chars in the items name
-                            $item['name'] = str_replace("&", ' And ', $item['name']);
-
+                        }elseif ($item['product_type'] == 'configurable') {
+                            
                             $itemArray[] = array(
-                                'client_ref' => $order->getIncrementId(),
-                                'name' => $item['name'],
-                                'sku' => $item['sku'],
-                                'quantity' => ($itemsToShip != $item['qty_ordered']) ? $itemsToShip : $item['qty_ordered'],//$item['qty_ordered'],
-                                'merchant_details' => array(
-                                    'mobile' => $storeTelephone,
-                                    'phone' => $storeTelephone,
-                                    'name' => $store->getFrontendName(),
-                                    'address' => $storeAddress,
+                                'client_ref'        => $client_ref,
+                                'name'              => $item['name'],
+                                'sku'               => $item['sku'],
+                                'quantity'          => $item['qty_ordered'],
+                                'merchant_details'  => array(
+                                    'mobile'    => $storeTelephone,
+                                    'phone'     => $storeTelephone,
+                                    'name'      => $store->getFrontendName(),
+                                    'address'   => $storeAddress,
                                 ),
-                                'COD' => $order->getShippingAmount(),
-                                'price' => $item['price'],
-                                'is_voucher' => 'No',
+                                'COD'               => $order->getShippingAmount(),
+                                'price'             => $item['price'],
+                                'is_voucher'        => 'No',
+                            );
+
+                        } else {
+                            
+                            $itemArray[] = array(
+                                'client_ref'        => $client_ref,
+                                'name'              => $item['name'],
+                                'sku'               => $item['sku'],
+                                'quantity'          => $item['qty_ordered'],
+                                'merchant_details'  => array(
+                                    'mobile'    => $storeTelephone,
+                                    'phone'     => $storeTelephone,
+                                    'name'      => $store->getFrontendName(),
+                                    'address'   => $storeAddress,
+                                ),
+                                'COD'               => $order->getShippingAmount(),
+                                'price'             => $item['price'],
+                                'is_voucher'        => 'No',
                             );
                         }
                     }
@@ -480,11 +530,6 @@ class Fetchr_Shipping_Model_Observer{
                         $discountAmount = abs($order->getDiscountAmount());
                     }
 
-                    //handling the grand total for partial shipment
-                    $shippedGrandTotal = 0;
-                    foreach ($itemArray as $items) {
-                        $shippedGrandTotal += $items['price'] * $items['quantity'];
-                    }
                     //Add the shipping price
                     $shippedGrandTotal = $shippedGrandTotal + $order->getShippingAmount();
 
@@ -499,144 +544,193 @@ class Fetchr_Shipping_Model_Observer{
 
                     //Handling Special chars in the address
                     foreach ($address as $key => $value) {
-                        $address[$key] = str_replace("&", ' And ', $address[$key]); 
+                        $address[$key] = strtr ($address[$key], array ('"' => ' ', '&' => ' And ')); 
                     }
-
+                    
+                    $erpOrderId     = $this->userName.'_'.$order->getIncrementId();
+                    
                     switch ($ServiceType) {
                         case 'fulfilment':
                         $dataErp[] = array(
                             'order' => array(
                                 'items' => $itemArray,
                                 'details' => array(
-                                    'status' => '',
-                                    'discount' => $discount,
-                                    'grand_total' => '0',//$grandtotal,
-                                    'customer_email' => $order->getCustomerEmail(),
-                                    'order_id' => $this->userName.'_'.$order->getIncrementId(),
-                                    'customer_firstname' => $address['firstname'],
-                                    'payment_method' => $paymentType,
-                                    'customer_mobile' => ($address['telephone']?$address['telephone']:'N/A'),
-                                    'customer_lastname' => $address['lastname'],
-                                    'order_country' => $address['country_id'],
-                                    'order_address' => $address['street'].', '.$address['city'].', '.$address['country_id'],
+                                    'status'                => '',
+                                    'discount'              => $discount,
+                                    'grand_total'           => '0',
+                                    'customer_email'        => $order->getCustomerEmail(),
+                                    'order_id'              => $erpOrderId,
+                                    'customer_firstname'    => $address['firstname'],
+                                    'payment_method'        => $paymentType,
+                                    'customer_mobile'       => ($address['telephone']?$address['telephone']:'N/A'),
+                                    'customer_lastname'     => $address['lastname'],
+                                    'order_country'         => $address['country_id'],
+                                    'order_address'         => $address['street'].', '.$address['city'].', '.$address['country_id'],
                                 ),
                             ),
                         );
                         break;
                         case 'delivery':
                         $dataErp = array(
-                            'username' => $this->userName,
-                            'password' => $this->password,
-                            'method' => 'create_orders',
-                            'pickup_location' => $storeAddress,
+                            'username'          => $this->userName,
+                            'password'          => $this->password,
+                            'method'            => 'create_orders',
+                            'pickup_location'   => $storeAddress,
                             'data' => array(
                                 array(
-                                    'order_reference' => $this->userName.'_'.$order->getIncrementId(),
-                                    'name' => $address['firstname'].' '.$address['lastname'],
-                                    'email' => $order->getCustomerEmail(),
-                                    'phone_number' => ($address['telephone']?$address['telephone']:'N/A'),
-                                    'address' => $address['street'],
-                                    'city' => $address['city'],
-                                    'payment_type' => $paymentType,
-                                    'amount' => '0',//$grandtotal,
-                                    'description' => 'No',
-                                    'comments' => $selectedShippingMethod,
+                                    'order_reference'   => $erpOrderId,
+                                    'name'              => $address['firstname'].' '.$address['lastname'],
+                                    'email'             => $order->getCustomerEmail(),
+                                    'phone_number'      => ($address['telephone']?$address['telephone']:'N/A'),
+                                    'address'           => $address['street'],
+                                    'city'              => $address['city'],
+                                    'payment_type'      => $paymentType,
+                                    'amount'            => '0',
+                                    'description'       => 'No',
+                                    'comments'          => $selectedShippingMethod,
                                 ),
                             ),
                         );
                     }
 
-                    $result[$order->getIncrementId()]['request_data'] = $dataErp;
-                    $result[$order->getIncrementId()]['response_data'] = $this->_sendDataToErp($dataErp, $order->getIncrementId());
+                    //Check if order already pushed
+                    $orderIsPushed = $this->_checkIfOrderIsPushed($this->userName.'_'.$order->getIncrementId());
+                    
+                    if($orderIsPushed['order_status'] == 'Order Not Found'){
 
-                    $response = $result[$order->getIncrementId()]['response_data'];
-                    $comments = '';
+                        $result[$order->getIncrementId()]['request_data']   = $dataErp;
+                        $result[$order->getIncrementId()]['response_data']  = $this->_sendDataToErp($dataErp, $order->getIncrementId());
 
-                    // Setting The Comment in the Order view
-                    if($ServiceType == 'fulfilment' ){
+                        $response = $result[$order->getIncrementId()]['response_data'];
+                        $comments = '';
 
-                        $tracking_number    = $response['tracking_no'];
-                        $response['status'] = ($response['success'] == true ? 'success' : 'faild');
-
-                        if($response['awb'] == 'SKU not found'){
-                            $comments  .= '<strong>Fetchr Comment:</strong> One Of The SKUs Are Not Added to Fetchr System, Please Contact one of Fetchr\'s Account Managers for More Details';
+                        if(!is_array($response)){        
+                            $response = explode('.', $response);
+                            $comments  .= '<strong>Fetchr Status:Faild,</strong> Order was NOT pushed due to '.$response[0].' Error, Please contact one of Fetchr\'s account managers and try again later';
                             $order->setStatus('pending');
                             $order->addStatusHistoryComment($comments, false);
                         }else{
-                            $comments  .= '<strong>Fetchr Status : Tracking URL </strong> http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
-                            $order->setStatus('processing');
-                            $order->addStatusHistoryComment($comments, false);
+                            // Setting The Comment in the Order view
+                            if($ServiceType == 'fulfilment' ){
+
+                                $tracking_number    = $response['tracking_no'];
+                                $response['status'] = ($response['success'] == true ? 'success' : 'faild');
+
+                                if($response['awb'] == 'SKU not found'){
+                                    $comments  .= '<strong>Fetchr Status:Faild,</strong> Order was <strong>NOT</strong> pushed because One Of The SKUs Are Not Added on Fetchr System, Please Contact one of <strong>Fetchr\'s</strong> Account Managers for More Details';
+                                    $order->setStatus('pending');
+                                    $order->addStatusHistoryComment($comments, false);
+                                }else{
+                                    $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is :  http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                    $order->setStatus('processing');
+                                    $order->addStatusHistoryComment($comments, false);
+                                }
+
+                            }elseif ($ServiceType == 'delivery') {
+                                $tracking_number    = $response[key($response)];
+                                $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is :  http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                $order->setStatus('processing');
+                                $order->addStatusHistoryComment($comments, false);
+                            }
                         }
+                        //CCOD Order Shipping And Invoicing
+                        if( $response['status'] == 'success'){
+                            try {
+                                Mage::getSingleton('core/session')->setOrderIsPushed(true);
 
-                    }elseif ($ServiceType == 'delivery') {
-                        $tracking_number    = $response[key($response)];
-                        $comments  .= '<strong>Fetchr Status : Tracking URL </strong> http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
-                        $order->setStatus('processing');
-                        $order->addStatusHistoryComment($comments, false);
-                    }
+                                //Get Order Qty
+                                $qty = array();
+                                foreach ($order->getAllVisibleItems() as $item) {
+                                    $product_id             = $item->getProductId();
+                                    $Itemqty                = $item->getQtyOrdered() - $item->getQtyShipped() - $item->getQtyRefunded() - $item->getQtyCanceled();
+                                    $qty[$item->getId()]    = $Itemqty;
+                                }
 
-                    //CCOD Order Shipping And Invoicing
-                    if( $response['status'] == 'success'){
-                        try {
-                            //Get Order Qty
-                            $qty = array();
-                            foreach ($order->getAllVisibleItems() as $item) {
-                                $product_id             = $item->getProductId();
-                                $Itemqty                = $item->getQtyOrdered() - $item->getQtyShipped() - $item->getQtyRefunded() - $item->getQtyCanceled();
-                                $qty[$item->getId()]    = $Itemqty;
+                                //Create Shipment When Auto Push Is OFF
+                                if(!empty($shipment)){
+                                    $trackdata = array();
+                                    $trackdata['carrier_code']  = 'fetchr';
+                                    $trackdata['title']         = 'Fetchr';
+                                    $trackdata['number']        = $tracking_number;
+                                    
+                                    $track = Mage::getModel('sales/order_shipment_track')->addData($trackdata);
+                                    $shipment->addTrack($track);
+                                }else{
+                                    //Create Shipment When Auto Push Is On
+                                    if ($order->canShip()) {
+                                        $shipment = $order->prepareShipment($qty);
+
+                                        $trackdata = array();
+                                        $trackdata['carrier_code'] = 'fetchr';
+                                        $trackdata['title'] = 'Fetchr';
+                                        $trackdata['number'] = $tracking_number;
+                                        $track = Mage::getModel('sales/order_shipment_track')->addData($trackdata);
+
+                                        $shipment->addTrack($track);
+                                        //$shipment->register();
+                                        $transactionSave = Mage::getModel('core/resource_transaction')
+                                        ->addObject($shipment)
+                                        ->addObject($shipment->getOrder())
+                                        ->save();
+
+                                        Mage::log('Order '.$orderId.' has been shipped!', null, 'fetchr.log');
+                                    } else {
+                                        Mage::log('Order '.$orderId.' cannot be shipped!', null, 'fetchr.log');
+                                    }
+
+                                }
+
+                            }catch (Exception $e) {
+                                $order->addStatusHistoryComment('Exception occurred during automaticallyInvoiceShipCompleteOrder action. Exception message: '.$e->getMessage(), false);
+                                $order->save();
                             }
-
-                            //Create Shipment When Auto Push Is OFF
-                            if(!empty($shipment)){
-                                //$shipment = $shipment->getData();
-                                $trackdata = array();
-                                $trackdata['carrier_code'] = 'fetchr';
-                                $trackdata['title'] = 'Fetchr';
-                                $trackdata['number'] = $tracking_number;
-                                $track = Mage::getModel('sales/order_shipment_track')
-                                    ->setShipment($shipment)
-                                    ->setData('title', $trackdata['title']) // User syntax correct name here
-                                    ->setData('number', $trackdata['number'])
-                                    ->setData('carrier_code', $trackdata['carrier_code']) // use code that matches DB code for ship method here
-                                    ->setData('order_id', $shipment->getData('order_id'));
-
-                                $track->save();
-                            }
-
-                            //Create Shipment When Auto Push Is On
-                            if ($order->canShip()) {
-                                $shipment = $order->prepareShipment($qty);
-
-                                $trackdata = array();
-                                $trackdata['carrier_code'] = 'fetchr';
-                                $trackdata['title'] = 'Fetchr';
-                                $trackdata['number'] = $tracking_number;
-                                $track = Mage::getModel('sales/order_shipment_track')->addData($trackdata);
-
-                                $shipment->addTrack($track);
-                                //$shipment->register();
-                                $transactionSave = Mage::getModel('core/resource_transaction')
-                                ->addObject($shipment)
-                                ->addObject($shipment->getOrder())
-                                ->save();
-
-                                Mage::log('Order '.$orderId.' has been shipped!', null, 'fetchr.log');
-                            } else {
-                                Mage::log('Order '.$orderId.' cannot be shipped!', null, 'fetchr.log');
-                            }
-
-                        }catch (Exception $e) {
-                            $order->addStatusHistoryComment('Exception occurred during automaticallyInvoiceShipCompleteOrder action. Exception message: '.$e->getMessage(), false);
-                            $order->save();
                         }
+                        //End COD Order Shipping And Invoicing
+                        unset($dataErp, $itemArray);
                     }
-                    //End COD Order Shipping And Invoicing
-
-                    unset($dataErp, $itemArray);
                 } catch (Exception $e) {
                     echo (string) $e->getMessage();
                 }
             }
+        }
+    }
+
+    protected function _checkIfOrderIsPushed($orderId)
+    {
+        $this->userName     = Mage::getStoreConfig('carriers/fetchr/username');
+        $this->password     = Mage::getStoreConfig('carriers/fetchr/password');
+        $this->accountType  = Mage::getStoreConfig('carriers/fetchr/accounttype');
+
+        switch ($this->accountType) {
+            case 'live':
+            $baseurl = Mage::getStoreConfig('fetchr_shipping/settings/liveurl');
+            break;
+            case 'staging':
+            $baseurl = Mage::getStoreConfig('fetchr_shipping/settings/stagingurl');
+        }
+
+        $data   =   array(  'username' => $this->userName,
+                            'password' => $this->password,
+                            'method' => 'getOrderReport',
+                            'order_id' =>  $orderId
+                    );
+
+        try{
+            $data_string  = json_encode($data) ;
+            $ch           = curl_init();
+            $url          = $baseurl.'/api/getreport/';
+            
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
+            
+            $results = curl_exec($ch);
+            $results = json_decode($results, true);
+            return $results;
+
+        }catch (Exception $e) {
+            echo (string) $e->getMessage();
         }
     }
 
