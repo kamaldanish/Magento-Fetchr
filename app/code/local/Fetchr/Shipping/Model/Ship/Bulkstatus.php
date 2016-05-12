@@ -140,6 +140,7 @@ class Fetchr_Shipping_Model_Ship_Bulkstatus
                 if($paymentType == 'cashondelivery' || $paymentType == 'phoenix_cashondelivery'){
                     $order->setBaseTotalInvoiced($order->getBaseGrandTotal());
                     $order->setBaseTotalPaid($order->getBaseGrandTotal());
+                    $order->setTotalPaid($order->getBaseGrandTotal());  
                 }
                 $order->save();
                 
