@@ -116,9 +116,13 @@ class Fetchr_Shipping_Model_Observer{
 
         $shippingmethod     = explode('_', $shippingmethod);
         $orderIsPushed      = Mage::getSingleton('core/session')->getOrderIsPushed();
-        $orderStatus        = $this->_checkIfOrderIsPushed($this->userName.'_'.$order->getIncrementId());
-
-        Mage::getSingleton('core/session')->unsOrderIsPushed();
+        
+        if($orderIsPushed == false){
+            $orderStatus  = $this->_checkIfOrderIsPushed($this->userName.'_'.$order->getIncrementId());
+        }else{
+            $orderStatus['order_status']  = 'Order Is Pushed'; 
+            Mage::getSingleton('core/session')->unsOrderIsPushed();
+        }
 
         if(isset($orderStatus['invalidcredential'])){
             Mage::getSingleton('core/session')->addError('Invalid Username Or Password on Fetchr configuration');
@@ -128,7 +132,7 @@ class Fetchr_Shipping_Model_Observer{
         }
 
         //Check if order already pushed
-        if($orderStatus['order_status'] == 'Order Not Found' ){
+        if($orderStatus['order_status'] == 'Order Not Found'){
             if( (in_array($shippingmethod[0], $activeShippingMethods) || $shippingmethod[0] == 'fetchr') && $paymentType == 'COD' ){
                 return $this->pushCODOrder($order, $shipment);
             }elseif( (in_array($shippingmethod[0], $activeShippingMethods) || $shippingmethod[0] == 'fetchr') && ($paymentType == 'CCOD' || $paymentType == 'cd') ){
@@ -349,10 +353,9 @@ class Fetchr_Shipping_Model_Observer{
 
                         //COD Order Shipping And Invoicing
                         if($response['status'] == 'success'){
+                            Mage::getSingleton('core/session')->setOrderIsPushed(true);
                             try {
 
-                                Mage::getSingleton('core/session')->setOrderIsPushed(true);
-                                
                                 //Get Order Qty
                                 $qty = array();
                                 foreach ($order->getAllVisibleItems() as $item) {
@@ -365,7 +368,15 @@ class Fetchr_Shipping_Model_Observer{
                                 if($order->canInvoice()) {
                                     $invoice = Mage::getModel('sales/service_order', $order)->prepareInvoice();
                                     $invoice->setRequestedCaptureCase(Mage_Sales_Model_Order_Invoice::CAPTURE_OFFLINE);
-                                    $invoice->setState(Mage_Sales_Model_Order_Invoice::STATE_OPEN)->save();
+                                    //$invoice->setState(Mage_Sales_Model_Order_Invoice::STATE_OPEN)->save();
+                                    $invoice->register();
+                                    
+                                    $order->setTotalPaid(0)
+                                            ->setBaseTotalPaid(0)
+                                            ->save();
+
+                                    $invoice->setState(1)
+                                            ->save();
 
                                     $transactionSave = Mage::getModel('core/resource_transaction')
                                     ->addObject($invoice)
@@ -404,7 +415,7 @@ class Fetchr_Shipping_Model_Observer{
                                         $track = Mage::getModel('sales/order_shipment_track')->addData($trackdata);
 
                                         $shipment->addTrack($track);
-                                        //$shipment->register();
+                                        $shipment->register();
                                         $transactionSave = Mage::getModel('core/resource_transaction')
                                         ->addObject($shipment)
                                         ->addObject($shipment->getOrder())
