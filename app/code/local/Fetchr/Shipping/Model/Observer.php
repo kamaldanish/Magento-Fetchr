@@ -246,7 +246,7 @@ class Fetchr_Shipping_Model_Observer{
 
                     $discountAmount = 0;
                     if ($order->getDiscountAmount()) {
-                        $discountAmount = abs($order->getDiscountAmount());
+                        $discountAmount = abs($order->getDiscountAmount()) + $order->getRewardpointsDiscount();
                     }
 
                     $address        = $order->getShippingAddress()->getData();
