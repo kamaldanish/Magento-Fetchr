@@ -100,7 +100,7 @@ class Fetchr_Shipping_Model_Ship_Bulkstatus
             //Check if the order ID has client username as prefix
             if(strpos($orderId, '_') !== false){
               $oids     = explode('_', $orderId);
-              $orderId  = $oids[1]; 
+              $orderId  = end($oids);
             }
 
             $order      = Mage::getModel('sales/order')->loadByIncrementId($orderId);
