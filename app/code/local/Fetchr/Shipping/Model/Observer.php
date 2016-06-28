@@ -334,7 +334,7 @@ class Fetchr_Shipping_Model_Observer{
                                     $order->setStatus('pending');
                                     $order->addStatusHistoryComment($comments, false);
                                 }else{
-                                    $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is : http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                    $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is : https://track.fetchr.us/track?tracking_id='.$tracking_number;
                                     $order->setState(Mage_Sales_Model_Order::STATE_PROCESSING, true);
                                     $order->setStatus('processing');
                                     $order->addStatusHistoryComment($comments, false);
@@ -343,7 +343,7 @@ class Fetchr_Shipping_Model_Observer{
 
                             }elseif($ServiceType == 'delivery') {
                                 $tracking_number    = $response[key($response)];
-                                $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is :  http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is :  https://track.fetchr.us/track?tracking_id='.$tracking_number;
                                 $order->setState(Mage_Sales_Model_Order::STATE_PROCESSING, true);
                                 $order->setStatus('processing');
                                 $order->addStatusHistoryComment($comments, false);
@@ -410,7 +410,7 @@ class Fetchr_Shipping_Model_Observer{
                                         $trackdata = array();
                                         $trackdata['carrier_code'] = 'fetchr';
                                         $trackdata['title'] = 'Fetchr';
-                                        $trackdata['url'] = 'http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                        $trackdata['url'] = 'https://track.fetchr.us/track?tracking_id='.$tracking_number;
                                         $trackdata['number'] = $tracking_number;
                                         $track = Mage::getModel('sales/order_shipment_track')->addData($trackdata);
 
@@ -632,14 +632,14 @@ class Fetchr_Shipping_Model_Observer{
                                     $order->setStatus('pending');
                                     $order->addStatusHistoryComment($comments, false);
                                 }else{
-                                    $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is :  http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                    $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is :  https://track.fetchr.us/track?tracking_id='.$tracking_number;
                                     $order->setStatus('processing');
                                     $order->addStatusHistoryComment($comments, false);
                                 }
 
                             }elseif ($ServiceType == 'delivery') {
                                 $tracking_number    = $response[key($response)];
-                                $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is :  http://track.fetchr.us/track.php?tracking_number='.$tracking_number;
+                                $comments  .= '<strong>Fetchr Status:Success,</strong> Order is <strong>Pushed</strong> on <strong>Fetchr</strong> ERP system, the Tracking URL is :  https://track.fetchr.us/track?tracking_id='.$tracking_number;
                                 $order->setStatus('processing');
                                 $order->addStatusHistoryComment($comments, false);
                             }
