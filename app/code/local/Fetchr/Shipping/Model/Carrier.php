@@ -99,7 +99,7 @@ class Fetchr_Shipping_Model_Carrier extends Mage_Shipping_Model_Carrier_Abstract
   public function getTrackingInfo($tracking)
   {
       $track = Mage::getModel('shipping/tracking_result_status');
-      $track->setUrl('http://track.fetchr.us/track.php?tracking_number=' . $tracking)
+      $track->setUrl('http://track.fetchr.us/track/' . $tracking)
           ->setTracking($tracking)
           ->setCarrierTitle($this->getConfigData('name'));
       return $track;

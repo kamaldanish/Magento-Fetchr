@@ -41,7 +41,7 @@
         <p class="header" ><?php echo ($track['title'] ? $track['title'] : $this->__('N/A')); ?> Tracking No : <?php echo (isset($track['number']) ? $track['number'] : ''); ?></p>
         </div>
         <div id="wrap">
-    <iframe id="frame" src="http://track.fetchr.us/track.php?tracking_number=<?php echo $track['number']; ?>" frameborder="0"></iframe>
+    <iframe id="frame" src="http://track.fetchr.us/track/<?php echo $track['number']; ?>" frameborder="0"></iframe>
         </div>
         </div>
 </div>
