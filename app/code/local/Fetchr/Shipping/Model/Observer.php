@@ -311,7 +311,7 @@ class Fetchr_Shipping_Model_Observer{
                     //Check if order already pushed
                     $orderIsPushed = $this->_checkIfOrderIsPushed($this->userName.'_'.$order->getIncrementId());
 
-                    if($orderIsPushed['order_status'] == 'Order Not Found'){
+                    if($orderIsPushed['order_status'] == 'Order Not Found' || empty($orderIsPushed['order_status']) ){
                         $result[$order->getIncrementId()]['request_data']   = $dataErp;
                         $result[$order->getIncrementId()]['response_data']  = $this->_sendDataToErp($dataErp, $order->getIncrementId());
 
@@ -607,7 +607,7 @@ class Fetchr_Shipping_Model_Observer{
                     //Check if order already pushed
                     $orderIsPushed = $this->_checkIfOrderIsPushed($this->userName.'_'.$order->getIncrementId());
                     
-                    if($orderIsPushed['order_status'] == 'Order Not Found'){
+                    if($orderIsPushed['order_status'] == 'Order Not Found' || empty($orderIsPushed['order_status']) ){
 
                         $result[$order->getIncrementId()]['request_data']   = $dataErp;
                         $result[$order->getIncrementId()]['response_data']  = $this->_sendDataToErp($dataErp, $order->getIncrementId());
