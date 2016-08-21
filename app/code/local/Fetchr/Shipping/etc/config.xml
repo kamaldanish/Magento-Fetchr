@@ -64,12 +64,13 @@
     </admin>
     <crontab>
         <jobs>
-            <order_status_update>
+           <order_status_update>
                 <schedule>
-                    <config_path>fetchr_shipping/settings/order_status_update</config_path>
+                    <cron_expr>*/1 * * * *</cron_expr>
+                    <!-- <config_path>fetchr_shipping/settings/order_status_update</config_path> -->
                 </schedule>
                 <run>
-                    <model>fetchr/ship_bulkstatus::run</model>
+                    <model>fetchr_shipping/ship_bulkstatus::run</model>
                 </run>
             </order_status_update>
         </jobs>
