@@ -802,7 +802,7 @@ class Fetchr_Shipping_Model_Observer{
                     }
                 break;
                 case 'delivery':
-                    $data_string = 'args='.json_encode($data);
+                    $data_string = 'args='.json_encode($data, JSON_UNESCAPED_UNICODE);
                     $ch = curl_init();
                     $url = $baseurl.'/client/api/';
                     curl_setopt($ch, CURLOPT_URL, $url);
